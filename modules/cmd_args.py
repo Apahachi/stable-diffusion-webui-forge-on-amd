@@ -123,6 +123,7 @@ parser.add_argument('--timeout-keep-alive', type=int, default=30, help='set time
 parser.add_argument("--disable-all-extensions", action='store_true', help="prevent all extensions from running regardless of any other settings", default=False)
 parser.add_argument("--disable-extra-extensions", action='store_true', help="prevent all extensions except built-in from running regardless of any other settings", default=False)
 parser.add_argument("--skip-load-model-at-start", action='store_true', help="if load a model at web start, only take effect when --nowebui", )
+parser.add_argument("--use-zluda", action='store_true', help = "use ZLUDA device as torch device")
 
 # Arguments added by forge.
 parser.add_argument(
