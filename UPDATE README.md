@@ -37,10 +37,10 @@ https://github.com/brknsoul/ROCmLibs/wiki/Adding-folders-to-PATH
 
 git clone https://github.com/likelovewant/stable-diffusion-webui-forge-on-amd.git
 then
-'''
-# webui.bat --use-zluda
 
-'''
+start by run : webui.bat --use-zluda
+
+
 
 or you may try add extra --cuda-stream --pin-shared-memory  to test the speed .
 
