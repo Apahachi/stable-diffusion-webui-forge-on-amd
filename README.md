@@ -45,7 +45,7 @@ then
 or you may try add extra --cuda-stream --pin-shared-memory  to test the speed .
 
 
-## Extra: if you do need build roclabs or already have library avialbe ,please skip this .
+## Extra: if you do need build roclabs or already have library ,please skip this .
 1,Visual Studio 2022
 2,Python
 3.Strawberry Perl
