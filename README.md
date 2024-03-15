@@ -1,8 +1,10 @@
+
+
 # Stable Diffusion WebUI Forge on AMD GPU
 
 Stable Diffusion WebUI Forge is a platform on top of [Stable Diffusion WebUI](https://github.com/AUTOMATIC1111/stable-diffusion-webui) (based on [Gradio](https://www.gradio.app/)) to make development easier, optimize resource management, and speed up inference.
 
-The code from forked from  https://github.com/lllyasviel/stable-diffusion-webui-forge, you can find more detail from here .
+The code from forked from[ lllyasviel](https://github.com/lllyasviel/stable-diffusion-webui-forge) https://github.com/lllyasviel/stable-diffusion-webui-forge, you can find more detail from here .
 
 The code tweaked based on git clone https://githubfast.com/lshqqytiger/stable-diffusion-webui-directml.git which nativly support zluda on amd .
 
@@ -37,6 +39,7 @@ https://github.com/brknsoul/ROCmLibs/wiki/Adding-folders-to-PATH
 
 git clone https://github.com/likelovewant/stable-diffusion-webui-forge-on-amd.git
 then
+
 
 start by run : webui.bat --use-zluda
 
