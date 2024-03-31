@@ -4,7 +4,7 @@
 
 Stable Diffusion WebUI Forge is a platform on top of [Stable Diffusion WebUI](https://github.com/AUTOMATIC1111/stable-diffusion-webui) (based on [Gradio](https://www.gradio.app/)) to make development easier, optimize resource management, and speed up inference.
 
-The code from forked from[ lllyasviel](https://github.com/lllyasviel/stable-diffusion-webui-forge) https://github.com/lllyasviel/stable-diffusion-webui-forge, you can find more detail from here .
+The code has forked from[ lllyasviel](https://github.com/lllyasviel/stable-diffusion-webui-forge) https://github.com/lllyasviel/stable-diffusion-webui-forge, you can find more detail from here .
 
 The code tweaked based on git clone https://githubfast.com/lshqqytiger/stable-diffusion-webui-directml.git which nativly support zluda on amd .
 
@@ -55,13 +55,13 @@ or you may try add extra --cuda-stream --pin-shared-memory  to test the speed .
 4,CMake
 5,Git
 6,HIP SDK ( mentioned in first step)
-7 , download https://github.com/ROCm/rocBLAS and [https://github.com/ROCm/rocBLAS](https://github.com/ROCm/Tensile) , put in same fold , eg , rocm ( more information from here https://rocmdocs.amd.com/projects/rocBLAS/en/latest/Windows_Install_Guide.html)
+7 , download https://github.com/ROCm/rocBLAS  and https://github.com/ROCm/Tensile （ download Tensile 4.38.0 for ROCm 5.7.0( latest on windows)， replace the CMakeLists.txt with this https://github.com/ROCm/Tensile/tree/develop/Tensile/Source/lib/CMakeLists.txt）） , put in same fold , eg , rocm ( more information from here https://rocmdocs.amd.com/projects/rocBLAS/en/latest/Windows_Install_Guide.html)
 
 in the rocm/rocBLAS , run python rdeps.py ( if you encounter any mistakes , try to google and fix with it )
 after done . try next step " python rmake.py -a "gfx1101;gfx1103" --lazy-library-loading --no-merge-architectures -t "C:\rocm\Tensile" the gfx1101,gfx1103 change  to your gpu or apu namber .
 
-Note: you need to change coresponding data in Tensile/Common.py in tensile library .change data in " globalParameters["SupportedISA"]" and "CACHED_ASM_CAPS" add data of your gpu number .and choose the simliar gpu achetecture. eg RND3 , then copy and put below with gpu number and others availble gpu data . if you want more perfect , you may try to use the data availbe in rocBLAS\library\src\blas3\Tensile\Logic\asm_full , change the data in their , eg, navi32,31 , you may build a new fold there name navi 3x , copy the files in navi32 to navi 3x , then you vs code to replace the gpu number .save it . and use navi34 in your  Tensile/Common.py in terms of  "CACHED_ASM_CAPS" .
-( The credits goes to wdx04 ,the original post in Chinese . you can refer it from there ([[(https://zhuanlan.zhihu.com/p/680642344)](https://zhuanlan.zhihu.com/p/680642344] )
+Note: you need to change coresponding data in Tensile/Common.py in tensile library .change data in " globalParameters["SupportedISA"]" and "CACHED_ASM_CAPS" add data of your gpu number .and choose the simliar gpu achetecture. eg RND3 , then copy and put below with gpu number and others availble gpu data . if you want more perfect , you may try to use the data availbe in rocBLAS\library\src\blas3\Tensile\Logic\asm_full , change the data in their , eg, navi32,31 , you may build a new fold there name navi 3x , copy the files in navi32 to navi 3x , then open the vs code to replace the gpu number .save it . and use navi3x in your  Tensile/Common.py in terms of  "CACHED_ASM_CAPS" .
+( The credits goes to wdx04 ,the original post in Chinese . you can refer it from there https://zhuanlan.zhihu.com/p/680642344
 
 All done . Have a good lucy and Hope enjoy it!
 
