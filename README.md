@@ -63,7 +63,7 @@ after done . try next step " python rmake.py -a "gfx1101;gfx1103" --lazy-library
 Note: you need to change coresponding data in Tensile/Common.py in tensile library .change data in " globalParameters["SupportedISA"]" and "CACHED_ASM_CAPS" add data of your gpu number .and choose the simliar gpu achetecture. eg RND3 , then copy and put below with gpu number and others availble gpu data . if you want more perfect , you may try to use the data availbe in rocBLAS\library\src\blas3\Tensile\Logic\asm_full , change the data in their , eg, navi32,31 , you may build a new fold there name navi 3x , copy the files in navi32 to navi 3x , then open the vs code to replace the gpu number .save it . and use navi3x in your  Tensile/Common.py in terms of  "CACHED_ASM_CAPS" .
 ( The credits goes to wdx04 ,the original post in Chinese . you can refer it from there https://zhuanlan.zhihu.com/p/680642344
 
-All done . Have a good lucy and Hope enjoy it!
+All done . Have a good lucy and Hope you enjoy it!
 
 
 
