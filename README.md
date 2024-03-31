@@ -48,14 +48,14 @@ start by run : webui.bat --use-zluda
 or you may try add extra --cuda-stream --pin-shared-memory  to test the speed .
 
 
-## Extra: if you do need build roclabs or already have library ,please skip this .
+## Extra: if you do not need build roclabs or already have library ,please skip this .
 1,Visual Studio 2022
 2,Python
 3.Strawberry Perl
 4,CMake
 5,Git
 6,HIP SDK ( mentioned in first step)
-7 , download https://github.com/ROCm/rocBLAS  and https://github.com/ROCm/Tensile （ download Tensile 4.38.0 for ROCm 5.7.0( latest on windows)， replace the CMakeLists.txt with this https://github.com/ROCm/Tensile/tree/develop/Tensile/Source/lib/CMakeLists.txt）） , put in same fold , eg , rocm ( more information from here https://rocmdocs.amd.com/projects/rocBLAS/en/latest/Windows_Install_Guide.html)
+7 , download https://github.com/ROCm/rocBLAS  and https://github.com/ROCm/Tensile （ download Tensile 4.38.0 for ROCm 5.7.0 ( latest) on windows)， replace the CMakeLists.txt with this https://github.com/ROCm/Tensile/tree/develop/Tensile/Source/lib/CMakeLists.txt）） , put in same fold , eg , rocm ( more information from here https://rocmdocs.amd.com/projects/rocBLAS/en/latest/Windows_Install_Guide.html)
 
 in the rocm/rocBLAS , run python rdeps.py ( if you encounter any mistakes , try to google and fix with it )
 after done . try next step " python rmake.py -a "gfx1101;gfx1103" --lazy-library-loading --no-merge-architectures -t "C:\rocm\Tensile" the gfx1101,gfx1103 change  to your gpu or apu namber .
