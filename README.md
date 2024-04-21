@@ -48,16 +48,25 @@ or you may try add extra
 	--cuda-stream --pin-shared-memory  
  
  to test the speed .
+## update;In the root folder 
+	git pull
+ if your edited any of the file, try below.
+
+ 	git stash  
+	git pull origin master  
+	git stash pop 
+
+ Then apply the change in your code editor( eg VS code) ,where `git stash pop`listed.
 
 
 ## Extra: if you do not need build roclabs or already have library ,please skip this .
-### 1,Visual Studio 2022
-### 2,Python
-### 3.Strawberry Perl
-### 4,CMake
-### 5,Git
-### 6,HIP SDK ( mentioned in first step)
-### 7,Download 
+#### 1,Visual Studio 2022
+#### 2,Python
+#### 3.Strawberry Perl
+#### 4,CMake
+#### 5,Git
+#### 6,HIP SDK ( mentioned in first step)
+#### 7,Download 
 [ rocblas ]( https://github.com/ROCm/rocBLAS) and [ Tensile ]( https://github.com/ROCm/Tensile)（ download Tensile 4.38.0 for ROCm 5.7.0 ( latest) on windows)， replace ` CMakeLists.txt ` if you download the ` tensile 4.38.0 `from release page please replace `cmakeLists` in `Tensile/tree/develop/Tensile/Source/lib/CMakeLists.txt ` with this [  CMakeLists.txt  ](https://github.com/ROCm/Tensile/tree/develop/Tensile/Source/lib/CMakeLists.txt), put in same fold , eg , `rocm`( more information from  [  rocm official guide   ](https://rocmdocs.amd.com/projects/rocBLAS/en/latest/Windows_Install_Guide.html))
 
 Download [ Tensile-fix-fallback-arch-build.patch ]( https://github.com/likelovewant/ROCmLibs-for-gfx1103-AMD780M-APU-/blob/main/Tensile-fix-fallback-arch-build.patch) place in `Tensile` folder .for example` C:\ROCM\Tensile-rocm-5.7.0`
@@ -65,24 +74,27 @@ open the terminal in `Tensile-rocm-5.7.0  `
 
 	git apply Tensile-fix-fallback-arch-build.patch
 
-in the rocm/rocBLAS , run 
+in the rocm/rocBLAS , run (windows)
      
 	 python rdeps.py
 
-( if you encounter any mistakes , try to google and fix with it or try it again  )
+( using `install.sh -d` in linux , if you encounter any mistakes , try to google and fix with it or try it again  )
 after done . try next step
 
 	python rmake.py -a "gfx1101;gfx1103" --lazy-library-loading --no-merge-architectures -t "C:\rocm\Tensile-rocm-5.7.0
 
 the`gfx1101,gfx1103`change  to your` gpu or apu namber `.
 
-Upon successful compilation, rocblas.dll will be generated in the `build\release\staging folder`. On my computer, the specific file path is 	`C:\ROCM\rocBLAS-rocm-5.7.0\build\release\staging\rocblas.dll`
+Upon successful compilation, rocblas.dll will be generated in the `build\release\staging folder`. On my computer, the  file path is 	`C:\ROCM\rocBLAS-rocm-5.7.0\build\release\staging\rocblas.dll`
 
 In addition, some Tensile data files will also be produced in: `C:\ROCM\rocBLAS-rocm-5.7.0\build\release\Tensile\library`
 
 To compile HIP SDK programs that use hipBLAS/rocBLAS, you gotta replace the rocblas.dll file in the SDK with the one you just made yourself, Then,  Place `rocblas.dll `into `C:\Program Files\AMD\ROCm\5.7\bin` and the Tensile data files in the `rocblas\library folder`, relative to the `rocblas.dll `file (which is at `C:\Program Files\AMD\ROCm\5.7\bin\rocblas\library`, innit?). Once that's done, your program should run smooth as silk on the designated graphics card"
 
 Note: you need to change coresponding data in`Tensile/Common.py` in tensile library .change data in `" globalParameters["SupportedISA"]" `and `"CACHED_ASM_CAPS"` add data of your`gpu number` .and choose the simliar gpu achetecture. eg `RND3`, then copy and put below with your gpu number and others availble gpu data . if you want more perfect , you may try to use the data availbe in` rocBLAS\library\src\blas3\Tensile\Logic\asm_full `, change the data in their , eg, `navi32,31 , `you may build a new fold there name` navi 3x `, copy the files in` navi32`to `navi 3x`, then open the vs code or visual studio or any other code editor to replace the gpu number .save it . and use` navi 3x` in your ` Tensile/Common.py`in terms of  `"CACHED_ASM_CAPS" `.
+
+Note2 : on Linux (6.1.0 roclabs) ,you may need to edit more . search `Processor` and `gfx1102`(choose the supported card) in entire tensile folder,add your gpu number in where`gfx1102` shows.Then build again . More information avaialbe on[ rocm linux](https://rocm.docs.amd.com/projects/rocBLAS/en/latest/install/Linux_Install_Guide.html#linux-install) .However ,it is not recommended . There easier approach is using `HSA_OVERRIDE_GFX_VERSION` eg, `export HSA_OVERRIDE_GFX_VERSION=11.0.0` overide with support gpu.
+
 ( The credits goes to wdx04 ,the original post in Chinese . you may google translate refer it from  [ here  ](https://zhuanlan.zhihu.com/p/680642344)
 
 All done . Have a good lucy and Hope you enjoy it!
