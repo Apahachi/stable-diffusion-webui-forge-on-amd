@@ -69,10 +69,7 @@ def initialize():
     initialize_util.validate_tls_options()
     initialize_util.configure_sigint_handler()
     initialize_util.configure_opts_onchange()
-    torch.backends.cudnn.enabled = False
-    torch.backends.cuda.enable_flash_sdp(False)
-    torch.backends.cuda.enable_math_sdp(True)
-    torch.backends.cuda.enable_mem_efficient_sdp(False)
+    
 
     from modules import sd_models
     sd_models.setup_model()
