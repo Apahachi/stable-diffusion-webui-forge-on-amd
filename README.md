@@ -6,10 +6,12 @@ Stable Diffusion WebUI Forge is a platform on top of [Stable Diffusion WebUI](ht
 
 The code has forked from[ lllyasviel ]( https://github.com/lllyasviel/stable-diffusion-webui-forge ), you can find more detail from there .
 
-The code tweaked based on  ( `git clone https://githubfast.com/lshqqytiger/stable-diffusion-webui-directml.git` ) which nativly support zluda on amd .
+The code tweaked based on [stable-diffusion-webui-directml](https://github.com/lshqqytiger/stable-diffusion-webui-directml) which nativly support zluda on amd .
 
 If you want learn what changes between them . I only touch files `cmd_args.py`,`shared_init.py`,`launch_utils.py` and add` zluda.py`, All those changes code came  from  [ lshqqytiger]( https://github.com/lshqqytiger)  , Credits should goes to lshqqytiger and lllyasviel.
 INSTALL ,You can refer to [ sd.next zluda install guide]( https://github.com/vladmandic/automatic/wiki/ZLUDA) for more about information.
+
+Update ,lshqqytiger also start a new fork for [Forge](https://github.com/lshqqytiger/stable-diffusion-webui-amdgpu-forge) he has a better support for this . you may try his fork also .
 
 ## 1, Installing ZLUDA for AMD GPUs in Windows.
 
@@ -25,10 +27,6 @@ For example , Place `rocblas.dll `into `C:\Program Files\AMD\ROCm\5.7\bin`( this
 ## Install HIP SDK
 Download [ HIP SDK 5.7](https://www.amd.com/en/developer/resources/rocm-hub/hip-sdk.html)
 
-## Install Perl
-Install [Perl]( https://strawberryperl.com/)
-
-The hipconfig command does not work without Perl
 
 ## Add folders to PATH
 Download from[ here](https://github.com/lshqqytiger/ZLUDA/releases/)
@@ -50,8 +48,9 @@ or you may try add extra
 	--cuda-stream --pin-shared-memory  
  
  to test the speed .
-## update;In the root folder 
+## update; In the root directory
 	git pull
+
  if your edited any of the file, try below.
 
  	git stash  
