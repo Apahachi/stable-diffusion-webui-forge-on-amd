@@ -6,6 +6,10 @@ __pycache__
 /SwinIR/*
 /repositories
 /venv
+/1.15.0
+/2.0.3
+/A启动器.exe
+/venv
 /tmp
 /output
 /model.ckpt

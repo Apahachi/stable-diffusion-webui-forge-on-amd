@@ -7,6 +7,7 @@ import math
 
 import ldm_patched.modules.utils
 import ldm_patched.modules.model_management
+from ldm_patched.modules.controlnet import ControlNet
 from ldm_patched.modules.clip_vision import clip_preprocess
 from ldm_patched.ldm.modules.attention import optimized_attention
 from ldm_patched.utils import path_utils as folder_paths
@@ -402,7 +403,7 @@ class CrossAttentionPatch:
         batch_prompt = b // len(cond_or_uncond)
         out = optimized_attention(q, k, v, extra_options["n_heads"])
         _, _, lh, lw = extra_options["original_shape"]
-        
+
         for weight, cond, uncond, ipadapter, mask, weight_type, sigma_start, sigma_end, unfold_batch in zip(self.weights, self.conds, self.unconds, self.ipadapters, self.masks, self.weight_type, self.sigma_start, self.sigma_end, self.unfold_batch):
             if sigma > sigma_start or sigma < sigma_end:
                 continue
@@ -465,8 +466,18 @@ class CrossAttentionPatch:
                     ip_v = ip_v_offset + ip_v_mean * W
 
             out_ip = optimized_attention(q, ip_k.to(org_dtype), ip_v.to(org_dtype), extra_options["n_heads"])
-            if weight_type.startswith("original"):
-                out_ip = out_ip * weight
+
+            if weight_type == "original":
+                assert isinstance(weight, (float, int))
+                weight = weight
+            elif weight_type == "advanced":
+                assert isinstance(weight, list)
+                transformer_index: int = extra_options["transformer_index"]
+                assert transformer_index < len(weight)
+                weight = weight[transformer_index]
+            else:
+                weight = 1.0
+            out_ip = out_ip * weight
 
             if mask is not None:
                 # TODO: needs checking
@@ -732,7 +743,7 @@ class IPAdapterApply:
             is_faceid=self.is_faceid,
             is_instant_id=self.is_instant_id
         )
-        
+
         self.ipadapter.to(self.device, dtype=self.dtype)
 
         if self.is_instant_id:
@@ -749,13 +760,27 @@ class IPAdapterApply:
         work_model = model.clone()
 
         if self.is_instant_id:
-            def modifier(cnet, x_noisy, t, cond, batched_number):
+            def instant_id_modifier(cnet: ControlNet, x_noisy, t, cond, batched_number):
+                """Overwrites crossattn inputs to InstantID ControlNet with ipadapter image embeds.
+
+                TODO: There can be multiple pairs of InstantID (ipadapter/controlnet) to control
+                rendering of multiple faces on canvas. We need to find a way to pair them. Currently,
+                the modifier is unconditionally applied to all instant id ControlNet units.
+                """
+                if (
+                    not isinstance(cnet, ControlNet) or
+                    # model_file_name is None for Control LoRA.
+                    cnet.control_model.model_file_name is None or
+                    "instant_id" not in cnet.control_model.model_file_name.lower()
+                ):
+                    return x_noisy, t, cond, batched_number
+
                 cond_mark = cond['transformer_options']['cond_mark'][:, None, None].to(cond['c_crossattn'])  # cond is 0
                 c_crossattn = image_prompt_embeds * (1.0 - cond_mark) + uncond_image_prompt_embeds * cond_mark
                 cond['c_crossattn'] = c_crossattn
                 return x_noisy, t, cond, batched_number
 
-            work_model.add_controlnet_conditioning_modifier(modifier)
+            work_model.add_controlnet_conditioning_modifier(instant_id_modifier)
 
         if attn_mask is not None:
             attn_mask = attn_mask.to(self.device)

@@ -11,16 +11,17 @@ from lib_controlnet import (
     global_state,
     external_code,
 )
+from lib_controlnet.external_code import ControlNetUnit
 from lib_controlnet.logging import logger
 from lib_controlnet.controlnet_ui.openpose_editor import OpenposeEditor
 from lib_controlnet.controlnet_ui.preset import ControlNetPresetUI
 from lib_controlnet.controlnet_ui.tool_button import ToolButton
 from lib_controlnet.controlnet_ui.photopea import Photopea
+from lib_controlnet.controlnet_ui.multi_inputs_gallery import MultiInputsGallery
 from lib_controlnet.enums import InputMode, HiResFixOption
 from modules import shared, script_callbacks
 from modules.ui_components import FormRow
 from modules_forge.forge_util import HWC3
-from lib_controlnet.external_code import UiControlNetUnit
 
 
 @dataclass
@@ -171,10 +172,10 @@ class ControlNetUiGroup(object):
         self.webcam_mirrored = False
 
         # Note: All gradio elements declared in `render` will be defined as member variable.
-        # Update counter to trigger a force update of UiControlNetUnit.
+        # Update counter to trigger a force update of ControlNetUnit.
         # dummy_gradio_update_trigger is useful when a field with no event subscriber available changes.
         # e.g. gr.Gallery, gr.State, etc. After an update to gr.State / gr.Gallery, please increment
-        # this counter to trigger a sync update of UiControlNetUnit.
+        # this counter to trigger a sync update of ControlNetUnit.
         self.dummy_gradio_update_trigger = None
         self.enabled = None
         self.upload_tab = None
@@ -185,10 +186,11 @@ class ControlNetUiGroup(object):
         self.mask_image = None
         self.batch_tab = None
         self.batch_image_dir = None
-        self.merge_tab = None
+        self.batch_upload_tab = None
         self.batch_input_gallery = None
-        self.merge_upload_button = None
-        self.merge_clear_button = None
+        self.batch_mask_gallery = None
+        self.multi_inputs_upload_tab = None
+        self.multi_inputs_input_gallery = None
         self.create_canvas = None
         self.canvas_width = None
         self.canvas_height = None
@@ -225,6 +227,7 @@ class ControlNetUiGroup(object):
         self.hr_option = None
         self.batch_image_dir_state = None
         self.output_dir_state = None
+        self.advanced_weighting = gr.State(None)
 
         # Internal states for UI state pasting.
         self.prevent_next_n_module_update = 0
@@ -331,31 +334,17 @@ class ControlNetUiGroup(object):
                             visible=False,
                         )
 
-                with gr.Tab(label="Batch Upload") as self.merge_tab:
+                with gr.Tab(label="Batch Upload") as self.batch_upload_tab:
                     with gr.Row():
-                        with gr.Column():
-                            self.batch_input_gallery = gr.Gallery(
-                                columns=[4], rows=[2], object_fit="contain", height="auto", label="Images"
-                            )
-                            with gr.Row():
-                                self.merge_upload_button = gr.UploadButton(
-                                    "Upload Images",
-                                    file_types=["image"],
-                                    file_count="multiple",
-                                )
-                                self.merge_clear_button = gr.Button("Clear Images")
-                        with gr.Group(visible=False, elem_classes=["cnet-mask-gallery-group"]) as self.batch_mask_gallery_group:
-                            with gr.Column():
-                                self.batch_mask_gallery = gr.Gallery(
-                                    columns=[4], rows=[2], object_fit="contain", height="auto", label="Masks"
-                                )
-                                with gr.Row():
-                                    self.mask_merge_upload_button = gr.UploadButton(
-                                        "Upload Masks",
-                                        file_types=["image"],
-                                        file_count="multiple",
-                                    )
-                                    self.mask_merge_clear_button = gr.Button("Clear Masks")
+                        self.batch_input_gallery = MultiInputsGallery()
+                        self.batch_mask_gallery = MultiInputsGallery(
+                            visible=False,
+                            elem_classes=["cnet-mask-gallery-group"]
+                        )
+
+                with gr.Tab(label="Multi-Inputs") as self.multi_inputs_upload_tab:
+                    with gr.Row():
+                        self.multi_inputs_gallery = MultiInputsGallery()
 
             if self.photopea:
                 self.photopea.attach_photopea_output(self.generated_image)
@@ -600,8 +589,9 @@ class ControlNetUiGroup(object):
             self.use_preview_as_input,
             self.batch_image_dir,
             self.batch_mask_dir,
-            self.batch_input_gallery,
-            self.batch_mask_gallery,
+            self.batch_input_gallery.input_gallery,
+            self.batch_mask_gallery.input_gallery,
+            self.multi_inputs_gallery.input_gallery,
             self.generated_image,
             self.mask_image,
             self.hr_option,
@@ -618,9 +608,16 @@ class ControlNetUiGroup(object):
             self.guidance_end,
             self.pixel_perfect,
             self.control_mode,
+            self.advanced_weighting,
         )
 
         unit = gr.State(self.default_unit)
+        def create_unit(*args):
+            return ControlNetUnit.from_dict({
+                k: v
+                for k, v in zip(vars(ControlNetUnit()).keys(), args)
+            })
+
         for comp in unit_args + (self.dummy_gradio_update_trigger,):
             event_subscribers = []
             if hasattr(comp, "edit"):
@@ -637,7 +634,7 @@ class ControlNetUiGroup(object):
 
             for event_subscriber in event_subscribers:
                 event_subscriber(
-                    fn=UiControlNetUnit, inputs=list(unit_args), outputs=unit
+                    fn=create_unit, inputs=list(unit_args), outputs=unit
                 )
 
         (
@@ -645,7 +642,7 @@ class ControlNetUiGroup(object):
             if self.is_img2img
             else ControlNetUiGroup.a1111_context.txt2img_submit_button
         ).click(
-            fn=UiControlNetUnit,
+            fn=create_unit,
             inputs=list(unit_args),
             outputs=unit,
             queue=False,
@@ -981,20 +978,41 @@ class ControlNetUiGroup(object):
         """Controls whether the upload mask input should be visible."""
         def on_checkbox_click(checked: bool, canvas_height: int, canvas_width: int):
             if not checked:
-                # Clear mask_image if unchecked.
-                return gr.update(visible=False), gr.update(value=None), gr.update(value=None, visible=False), \
-                        gr.update(visible=False), gr.update(value=None)
+                # Clear mask inputs if unchecked.
+                return (
+                    # Single mask upload.
+                    gr.update(visible=False),
+                    gr.update(value=None),
+                    # Batch mask upload dir.
+                    gr.update(value=None, visible=False),
+                    # Multi mask upload gallery.
+                    gr.update(visible=False),
+                    gr.update(value=None)
+                )
             else:
                 # Init an empty canvas the same size as the generation target.
                 empty_canvas = np.zeros(shape=(canvas_height, canvas_width, 3), dtype=np.uint8)
-                return gr.update(visible=True), gr.update(value=empty_canvas), gr.update(visible=True), \
-                        gr.update(visible=True), gr.update()
+                return (
+                    # Single mask upload.
+                    gr.update(visible=True),
+                    gr.update(value=empty_canvas),
+                    # Batch mask upload dir.
+                    gr.update(visible=True),
+                    # Multi mask upload gallery.
+                    gr.update(visible=True),
+                    gr.update(),
+                )
 
         self.mask_upload.change(
             fn=on_checkbox_click,
             inputs=[self.mask_upload, self.height_slider, self.width_slider],
-            outputs=[self.mask_image_group, self.mask_image, self.batch_mask_dir,
-                     self.batch_mask_gallery_group, self.batch_mask_gallery],
+            outputs=[
+                self.mask_image_group,
+                self.mask_image,
+                self.batch_mask_dir,
+                self.batch_mask_gallery.group,
+                self.batch_mask_gallery.input_gallery,
+            ],
             show_progress=False,
         )
 
@@ -1079,51 +1097,14 @@ class ControlNetUiGroup(object):
 
     def register_multi_images_upload(self):
         """Register callbacks on merge tab multiple images upload."""
-        self.merge_clear_button.click(
-            fn=lambda: [],
-            inputs=[],
-            outputs=[self.batch_input_gallery],
-        ).then(
-            fn=lambda x: gr.update(value=x + 1),
+        trigger_dict = dict(
+            fn=lambda n: gr.update(value=n + 1),
             inputs=[self.dummy_gradio_update_trigger],
             outputs=[self.dummy_gradio_update_trigger],
         )
-        self.mask_merge_clear_button.click(
-            fn=lambda: [],
-            inputs=[],
-            outputs=[self.batch_mask_gallery],
-        ).then(
-            fn=lambda x: gr.update(value=x + 1),
-            inputs=[self.dummy_gradio_update_trigger],
-            outputs=[self.dummy_gradio_update_trigger],
-        )
-
-        def upload_file(files, current_files):
-            return {file_d["name"] for file_d in current_files} | {
-                file.name for file in files
-            }
-
-        self.merge_upload_button.upload(
-            upload_file,
-            inputs=[self.merge_upload_button, self.batch_input_gallery],
-            outputs=[self.batch_input_gallery],
-            queue=False,
-        ).then(
-            fn=lambda x: gr.update(value=x + 1),
-            inputs=[self.dummy_gradio_update_trigger],
-            outputs=[self.dummy_gradio_update_trigger],
-        )
-        self.mask_merge_upload_button.upload(
-            upload_file,
-            inputs=[self.mask_merge_upload_button, self.batch_mask_gallery],
-            outputs=[self.batch_mask_gallery],
-            queue=False,
-        ).then(
-            fn=lambda x: gr.update(value=x + 1),
-            inputs=[self.dummy_gradio_update_trigger],
-            outputs=[self.dummy_gradio_update_trigger],
-        )
-        return
+        self.batch_input_gallery.register_callbacks(change_trigger=trigger_dict)
+        self.batch_mask_gallery.register_callbacks(change_trigger=trigger_dict)
+        self.multi_inputs_gallery.register_callbacks(change_trigger=trigger_dict)
 
     def register_core_callbacks(self):
         """Register core callbacks that only involves gradio components defined
@@ -1213,7 +1194,8 @@ class ControlNetUiGroup(object):
             for input_tab, fn in (
                 (ui_group.upload_tab, simple_fn),
                 (ui_group.batch_tab, batch_fn),
-                (ui_group.merge_tab, merge_fn),
+                (ui_group.batch_upload_tab, batch_fn),
+                (ui_group.multi_inputs_upload_tab, merge_fn),
             ):
                 # Sync input_mode.
                 input_tab.select(

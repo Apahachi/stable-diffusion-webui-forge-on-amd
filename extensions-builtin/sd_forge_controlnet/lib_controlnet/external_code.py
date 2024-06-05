@@ -183,6 +183,8 @@ class ControlNetUnit:
     batch_input_gallery: Optional[List[str]] = None
     # Optional list of gallery masks for batch processing; defaults to None.
     batch_mask_gallery: Optional[List[str]] = None
+    # Optional list of gallery images for multi-inputs; defaults to None.
+    multi_inputs_gallery: Optional[List[str]] = None
     # Holds the preview image as a NumPy array; defaults to None.
     generated_image: Optional[np.ndarray] = None
     # ====== End of UI only fields ======
@@ -192,7 +194,7 @@ class ControlNetUnit:
     mask_image: Optional[GradioImageMaskPair] = None
     # Specifies how this unit should be applied in each pass of high-resolution fix.
     # Ignored if high-resolution fix is not enabled.
-    hr_option: Union[HiResFixOption, int, str] = HiResFixOption.BOTH
+    hr_option: HiResFixOption = HiResFixOption.BOTH
     # Indicates whether the unit is enabled; defaults to True.
     enabled: bool = True
     # Name of the module being used; defaults to "None".
@@ -204,7 +206,7 @@ class ControlNetUnit:
     # Optional image for input; defaults to None.
     image: Optional[GradioImageMaskPair] = None
     # Specifies the mode of image resizing; defaults to inner fit.
-    resize_mode: Union[ResizeMode, int, str] = ResizeMode.INNER_FIT
+    resize_mode: ResizeMode = ResizeMode.INNER_FIT
     # Resolution for processing by the unit; defaults to -1 (unspecified).
     processor_res: int = -1
     # Threshold A for processing; defaults to -1 (unspecified).
@@ -218,7 +220,22 @@ class ControlNetUnit:
     # Enables pixel-perfect processing; defaults to False.
     pixel_perfect: bool = False
     # Control mode for the unit; defaults to balanced.
-    control_mode: Union[ControlMode, int, str] = ControlMode.BALANCED
+    control_mode: ControlMode = ControlMode.BALANCED
+    # Weight for each layer of ControlNet params.
+    # For ControlNet:
+    # - SD1.5: 13 weights (4 encoder block * 3 + 1 middle block)
+    # - SDXL: 10 weights (3 encoder block * 3 + 1 middle block)
+    # For T2IAdapter
+    # - SD1.5: 5 weights (4 encoder block + 1 middle block)
+    # - SDXL: 4 weights (3 encoder block + 1 middle block)
+    # For IPAdapter
+    # - SD15: 16 (6 input blocks + 9 output blocks + 1 middle block)
+    # - SDXL: 11 weights (4 input blocks + 6 output blocks + 1 middle block)
+    # Note1: Setting advanced weighting will disable `soft_injection`, i.e.
+    # It is recommended to set ControlMode = BALANCED when using `advanced_weighting`.
+    # Note2: The field `weight` is still used in some places, e.g. reference_only,
+    # even advanced_weighting is set.
+    advanced_weighting: Optional[List[float]] = None
 
     # Following fields should only be used in the API.
     # ====== Start of API only fields ======
@@ -275,6 +292,11 @@ class ControlNetUnit:
                     "image": mask,
                     "mask": np.zeros_like(mask),
                 }
+        # Convert strings to enums.
+        unit.input_mode = InputMode(unit.input_mode)
+        unit.hr_option = HiResFixOption(unit.hr_option)
+        unit.resize_mode = ResizeMode(unit.resize_mode)
+        unit.control_mode = ControlMode(unit.control_mode)
         return unit
 
 
