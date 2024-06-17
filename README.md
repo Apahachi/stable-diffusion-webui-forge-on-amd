@@ -59,8 +59,24 @@ or you may try add extra
 
  Then apply the change in your code editor( eg VS code) ,where `git stash pop`listed.
 
+if you encounter error  due to the 'pydantic.fields' (.\venv\lib\site-packages\pydantic\fields.py)
 
-## if you need build roclabs ,please get support by this [guide](https://github.com/likelovewant/ROCmLibs-for-gfx1103-AMD780M-APU/wiki) .
+This error is caused by insightface installing modules that newest.
+it's happens by manually installing insightface, can be resloved by install `pydantic==1.10.15`
+
+Open command prompt in root of this repo folder.
+
+Run these commands one after the other;
+```
+venv\Scripts\activate
+pip install insightface
+pip install albumentations==1.4.3
+pip install pydantic==1.10.15
+
+```
+Close command prompt and run webui-user.bat again.
+
+### if you need build roclabs ,please get support by this [guide](https://github.com/likelovewant/ROCmLibs-for-gfx1103-AMD780M-APU/wiki) .
 
 
 
