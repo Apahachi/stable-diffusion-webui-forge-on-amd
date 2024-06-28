@@ -9,7 +9,6 @@ The code has forked from[ lllyasviel ]( https://github.com/lllyasviel/stable-dif
 The code tweaked based on [stable-diffusion-webui-directml](https://github.com/lshqqytiger/stable-diffusion-webui-directml) which nativly support zluda on amd .
 
 If you want learn what changes between them . I only touch files `cmd_args.py`,`shared_init.py`,`launch_utils.py` and add` zluda.py`, All those changes code came  from  [ lshqqytiger]( https://github.com/lshqqytiger)  , Credits should goes to lshqqytiger and lllyasviel.
-INSTALL ,You can refer to [ sd.next zluda install guide]( https://github.com/vladmandic/automatic/wiki/ZLUDA) for more about information.
 
 Update ,lshqqytiger also start a new fork for [Forge](https://github.com/lshqqytiger/stable-diffusion-webui-amdgpu-forge) he has a better support for this . you may try his fork also .
 
@@ -59,8 +58,9 @@ or you may try add extra
 
  Then apply the change in your code editor( eg VS code) ,where `git stash pop`listed.
 
+Close command prompt and run webui-user.bat again.
 
-## if you need build roclabs ,please get support by this [guide](https://github.com/likelovewant/ROCmLibs-for-gfx1103-AMD780M-APU/wiki) .
+### if you need build roclabs ,please get support by this [guide](https://github.com/likelovewant/ROCmLibs-for-gfx1103-AMD780M-APU/wiki) .
 
 
 
