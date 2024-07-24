@@ -10,7 +10,15 @@ The code tweaked based on [stable-diffusion-webui-directml](https://github.com/l
 
 If you want learn what changes between them . I only touch files `cmd_args.py`,`shared_init.py`,`launch_utils.py` and add` zluda.py`, All those changes code came  from  [ lshqqytiger]( https://github.com/lshqqytiger)  , Credits should goes to lshqqytiger and lllyasviel.
 
-Update ,lshqqytiger also start a new fork for [Forge](https://github.com/lshqqytiger/stable-diffusion-webui-amdgpu-forge) he has a better support for this . you may try his fork also .
+**Update**
+
+lshqqytiger has started a new fork of Forge, available at
+[https://github.com/lshqqytiger/stable-diffusion-webui-amdgpu-forge](https://github.com/lshqqytiger/stable-diffusion-webui-amdgpu-forge). This fork provides better support and is recommended to use.
+
+Initially, the purpose of creating a fork was to make Forge compatible with AMD before lshqqytiger's new fork. Now
+that Lee's fork is available, it is highly recommended to use his version for both HIP SDK 5.7 and 6.1.2.
+
+Please note that this repository currently only supports HIP SDK 5.7.
 
 ## 1, Installing ZLUDA for AMD GPUs in Windows.
 
@@ -18,16 +26,17 @@ Update ,lshqqytiger also start a new fork for [Forge](https://github.com/lshqqyt
 A list of compatible GPUs can be found[ here](https://rocm.docs.amd.com/projects/install-on-windows/en/develop/reference/system-requirements.html). If your GPU is not on the list, then you may be need to build your own rocblas library to use ZLUDA or used builded library by others (eg,[ this ]( https://github.com/brknsoul/ROCmLibs/raw/main/ROCmLibs.zip?download=).
 ( Note: how to build robclas ? follow the last step)
 
-Also a list of builded rocblas aviable [ here](https://github.com/likelovewant/ROCmLibs-for-gfx1103-AMD780M-APU)
+Also a list of builded rocblas aviable [ here](https://github.com/likelovewant/ROCmLibs-for-gfx1103-AMD780M-APU) ( actually most of them)
 
 Note: If you have an integrated GPU (iGPU), you may need to disable it, or use the HIP_VISIBLE_DEVICES environment variable. OR if you IGPU exactly The apu amd 780M , download this[ file ](https://github.com/likelovewant/ROCmLibs-for-gfx1103-AMD780M-APU)
-For example , Place `rocblas.dll `into `C:\Program Files\AMD\ROCm\5.7\bin`( this fold will appear after install HIP SKD  in next step) replace the origianl one ,replace library within` rocblas\library` , the orignally library can be rename to something else , like , "origlibrary" in case for other uses.then Reboot PC
+For example , Place `rocblas.dll `into `C:\Program Files\AMD\ROCm\5.7\bin`( this fold will appear after install HIP SKD  in next step) replace the origianl one ,replace library within` rocblas\library` , the orignally library can be rename to something else , like , "origlibrary" in case for other uses.
 
 ## Install HIP SDK
 Download [ HIP SDK 5.7](https://www.amd.com/en/developer/resources/rocm-hub/hip-sdk.html)
 
 
 ## Add folders to PATH
+Add the HIP PATH 5.7/bin folder* and %HIP_PATH%bin to your [PATH.]
 Download from[ here](https://github.com/lshqqytiger/ZLUDA/releases/)
 Add the ZLUDA folder* and %HIP_PATH%bin to your [PATH.](https://github.com/brknsoul/ROCmLibs/wiki/Adding-folders-to-PATH)
 (note, you don't need to rename zluda files cublas.dll to cublas64_11.dll ,cusparse to cusparse64_11.dll and replace the one in vevn folder like other tutorial because the zluda had already detecd in patch in script)
