@@ -1,6 +1,10 @@
+# Under Construction
 
+WebUI Forge is under a week of major revision right now between 2024 Aug 1 and Aug 7. To join the test, just update to the latest unstable version.
 
-# Stable Diffusion WebUI Forge on AMD GPU
+For downloading previous versions, see [Previous Versions](https://github.com/lllyasviel/stable-diffusion-webui-forge/discussions/849).
+
+# Stable Diffusion WebUI Forge
 
 Stable Diffusion WebUI Forge is a platform on top of [Stable Diffusion WebUI](https://github.com/AUTOMATIC1111/stable-diffusion-webui) (based on [Gradio](https://www.gradio.app/)) to make development easier, optimize resource management, speed up inference, and study experimental features.
 
@@ -83,3 +87,35 @@ Close command prompt and run webui-user.bat again.
 
 
 
+### Previous Versions
+
+You can download previous versions [here](https://github.com/lllyasviel/stable-diffusion-webui-forge/discussions/849).
+
+# Forge Status
+
+Based on manual test one-by-one:
+
+| Component                                         | Status  | Last Test    |
+|---------------------------------------------------|---------|--------------|
+| Basic Diffusion                                   | Normal  | 2024 July 27 |
+| GPU Memory Management System                      | Normal  | 2024 July 27 |
+| LoRAs                                             | Normal  | 2024 July 27 |
+| All Preprocessors                                 | Normal  | 2024 July 27 |
+| All ControlNets                                   | Normal  | 2024 July 27 |
+| All IP-Adapters                                   | Normal  | 2024 July 27 |
+| All Instant-IDs                                   | Normal  | 2024 July 27 |
+| All Reference-only Methods                        | Normal  | 2024 July 27 |
+| All Integrated Extensions                         | Normal  | 2024 July 27 |
+| Popular Extensions (Adetailer, etc)               | Normal  | 2024 July 27 |
+| Gradio 4 UIs                                      | Normal  | 2024 July 27 |
+| Gradio 4 Forge Canvas                             | Normal  | 2024 July 27 |
+| LoRA/Checkpoint Selection UI for Gradio 4         | Normal  | 2024 July 27 |
+| Photopea/OpenposeEditor/etc for ControlNet        | Normal  | 2024 July 27 |
+| Wacom 128 level touch pressure support for Canvas | Normal  | 2024 July 15 |
+| Microsoft Surface touch pressure support for Canvas | Broken, pending fix  | 2024 July 29 |
+
+Feel free to open issue if anything is broken and I will take a look every several days. If I do not update this "Forge Status" then it means I cannot reproduce any problem. In that case, fresh re-install should help most.
+
+# Under Construction
+
+This Readme is under construction ... more docs/wiki coming soon ...

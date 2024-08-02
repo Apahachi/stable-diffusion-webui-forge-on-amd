@@ -1,7 +1,11 @@
+random_test.py
 __pycache__
 *.ckpt
 *.safetensors
 *.pth
+*.dev.js
+.DS_Store
+/output/
 /ESRGAN/*
 /SwinIR/*
 /repositories
@@ -44,7 +48,9 @@ notification.mp3
 /package-lock.json
 /.coverage*
 /test/test_outputs
+/cache
+trace.json
+/sysinfo-????-??-??-??-??.json
 /test/results.xml
 coverage.xml
-/README.md
 **/tests/**/expectations

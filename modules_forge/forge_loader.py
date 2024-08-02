@@ -18,6 +18,7 @@ from ldm.util import instantiate_from_config
 from modules_forge import forge_clip
 from modules_forge.unet_patcher import UnetPatcher
 from ldm_patched.modules.model_base import model_sampling, ModelType
+from backend.loader import load_huggingface_components
 
 import open_clip
 from transformers import CLIPTextModel, CLIPTokenizer
@@ -98,6 +99,8 @@ def load_checkpoint_guess_config(sd, output_vae=True, output_clip=True, output_c
         if output_clipvision:
             clipvision = ldm_patched.modules.clip_vision.load_clipvision_from_sd(sd, model_config.clip_vision_prefix, True)
 
+    huggingface_components = load_huggingface_components(sd)
+
     if output_model:
         inital_load_device = model_management.unet_inital_load_device(parameters, unet_dtype)
         offload_device = model_management.unet_offload_device()
@@ -105,18 +108,11 @@ def load_checkpoint_guess_config(sd, output_vae=True, output_clip=True, output_c
         model.load_model_weights(sd, "model.diffusion_model.")
 
     if output_vae:
-        vae_sd = ldm_patched.modules.utils.state_dict_prefix_replace(sd, {"first_stage_model.": ""}, filter_keys=True)
-        vae_sd = model_config.process_vae_state_dict(vae_sd)
-        vae = VAE(sd=vae_sd)
+        vae = huggingface_components['vae']
+        vae = VAE(model=vae)
 
     if output_clip:
-        w = WeightsLoader()
-        clip_target = model_config.clip_target()
-        if clip_target is not None:
-            clip = CLIP(clip_target, embedding_directory=embedding_directory)
-            w.cond_stage_model = clip.cond_stage_model
-            sd = model_config.process_clip_state_dict(sd)
-            load_model_weights(w, sd)
+        clip = CLIP(huggingface_components)
 
     left_over = sd.keys()
     if len(left_over) > 0:
@@ -175,7 +171,7 @@ def load_model_for_a1111(timer, checkpoint_info=None, state_dict=None):
             embedder = conditioner.embedders[i]
             typename = type(embedder).__name__
             if typename == 'FrozenCLIPEmbedder':  # SDXL Clip L
-                embedder.tokenizer = forge_objects.clip.tokenizer.clip_l.tokenizer
+                embedder.tokenizer = forge_objects.clip.tokenizer.clip_l
                 embedder.transformer = forge_objects.clip.cond_stage_model.clip_l.transformer
                 model_embeddings = embedder.transformer.text_model.embeddings
                 model_embeddings.token_embedding = sd_hijack.EmbeddingsWithFixes(
@@ -184,7 +180,7 @@ def load_model_for_a1111(timer, checkpoint_info=None, state_dict=None):
                 conditioner.embedders[i] = embedder
                 text_cond_models.append(embedder)
             elif typename == 'FrozenOpenCLIPEmbedder2':  # SDXL Clip G
-                embedder.tokenizer = forge_objects.clip.tokenizer.clip_g.tokenizer
+                embedder.tokenizer = forge_objects.clip.tokenizer.clip_g
                 embedder.transformer = forge_objects.clip.cond_stage_model.clip_g.transformer
                 embedder.text_projection = forge_objects.clip.cond_stage_model.clip_g.text_projection
                 model_embeddings = embedder.transformer.text_model.embeddings
@@ -199,14 +195,14 @@ def load_model_for_a1111(timer, checkpoint_info=None, state_dict=None):
         else:
             sd_model.cond_stage_model = conditioner
     elif type(sd_model.cond_stage_model).__name__ == 'FrozenCLIPEmbedder':  # SD15 Clip
-        sd_model.cond_stage_model.tokenizer = forge_objects.clip.tokenizer.clip_l.tokenizer
+        sd_model.cond_stage_model.tokenizer = forge_objects.clip.tokenizer.clip_l
         sd_model.cond_stage_model.transformer = forge_objects.clip.cond_stage_model.clip_l.transformer
         model_embeddings = sd_model.cond_stage_model.transformer.text_model.embeddings
         model_embeddings.token_embedding = sd_hijack.EmbeddingsWithFixes(
             model_embeddings.token_embedding, sd_hijack.model_hijack)
         sd_model.cond_stage_model = forge_clip.CLIP_SD_15_L(sd_model.cond_stage_model, sd_hijack.model_hijack)
     elif type(sd_model.cond_stage_model).__name__ == 'FrozenOpenCLIPEmbedder':  # SD21 Clip
-        sd_model.cond_stage_model.tokenizer = forge_objects.clip.tokenizer.clip_h.tokenizer
+        sd_model.cond_stage_model.tokenizer = forge_objects.clip.tokenizer.clip_h
         sd_model.cond_stage_model.transformer = forge_objects.clip.cond_stage_model.clip_h.transformer
         model_embeddings = sd_model.cond_stage_model.transformer.text_model.embeddings
         model_embeddings.token_embedding = sd_hijack.EmbeddingsWithFixes(
@@ -223,7 +219,10 @@ def load_model_for_a1111(timer, checkpoint_info=None, state_dict=None):
     if getattr(sd_model, 'parameterization', None) == 'v':
         sd_model.forge_objects.unet.model.model_sampling = model_sampling(sd_model.forge_objects.unet.model.model_config, ModelType.V_PREDICTION)
 
+    sd_model.is_sd3 = False
+    sd_model.latent_channels = 4
     sd_model.is_sdxl = conditioner is not None
+    sd_model.is_sdxl_inpaint = sd_model.is_sdxl and forge_objects.unet.model.diffusion_model.in_channels == 9
     sd_model.is_sd2 = not sd_model.is_sdxl and hasattr(sd_model.cond_stage_model, 'model')
     sd_model.is_sd1 = not sd_model.is_sdxl and not sd_model.is_sd2
     sd_model.is_ssd = sd_model.is_sdxl and 'model.diffusion_model.middle_block.1.transformer_blocks.0.attn1.to_q.weight' not in sd_model.state_dict().keys()
