@@ -127,7 +127,7 @@ class EmbeddingDatabase:
         return self.register_embedding_by_name(embedding, model, embedding.name)
 
     def register_embedding_by_name(self, embedding, model, name):
-        ids = model.cond_stage_model.tokenize([name])[0]
+        ids = [0, 0, 0]  # model.cond_stage_model.tokenize([name])[0]
         first_id = ids[0]
         if first_id not in self.ids_lookup:
             self.ids_lookup[first_id] = []
@@ -183,11 +183,7 @@ class EmbeddingDatabase:
 
         if data is not None:
             embedding = create_embedding_from_data(data, name, filename=filename, filepath=path)
-
-            if self.expected_shape == -1 or self.expected_shape == embedding.shape:
-                self.register_embedding(embedding, shared.sd_model)
-            else:
-                self.skipped_embeddings[name] = embedding
+            self.register_embedding(embedding, None)
         else:
             print(f"Unable to load Textual inversion embedding due to data issue: '{name}'.")
 
@@ -209,7 +205,7 @@ class EmbeddingDatabase:
                     errors.report(f"Error loading embedding {fn}", exc_info=True)
                     continue
 
-    def load_textual_inversion_embeddings(self, force_reload=False):
+    def load_textual_inversion_embeddings(self, force_reload=False, sync_with_sd_model=True):
         if not force_reload:
             need_reload = False
             for embdir in self.embedding_dirs.values():
@@ -223,7 +219,9 @@ class EmbeddingDatabase:
         self.ids_lookup.clear()
         self.word_embeddings.clear()
         self.skipped_embeddings.clear()
-        self.expected_shape = self.get_expected_shape()
+
+        if sync_with_sd_model:
+            self.expected_shape = self.get_expected_shape()
 
         for embdir in self.embedding_dirs.values():
             self.load_from_dir(embdir)
