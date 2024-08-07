@@ -11,15 +11,9 @@ from modules.api.api import decode_base64_to_image
 import gradio as gr
 
 from lib_controlnet import global_state, external_code
-from lib_controlnet.external_code import ControlNetUnit, InputMode
-from lib_controlnet.utils import (
-    align_dim_latent,
-    set_numpy_seed,
-    crop_and_resize_image,
-    prepare_mask,
-    judge_image_type,
-    try_unfold_unit,
-)
+from lib_controlnet.external_code import ControlNetUnit
+from lib_controlnet.utils import align_dim_latent, set_numpy_seed, crop_and_resize_image, \
+    prepare_mask, judge_image_type
 from lib_controlnet.controlnet_ui.controlnet_ui_group import ControlNetUiGroup
 from lib_controlnet.controlnet_ui.photopea import Photopea
 from lib_controlnet.logging import logger
@@ -112,13 +106,8 @@ class ControlNetForForgeOfficial(scripts.Script):
             for unit in units
         ]
         assert all(isinstance(unit, ControlNetUnit) for unit in units)
-        return [
-            simple_unit
-            for unit in units
-            # Unfolds multi-inputs units.
-            for simple_unit in try_unfold_unit(unit)
-            if simple_unit.enabled
-        ]
+        enabled_units = [x for x in units if x.enabled]
+        return enabled_units
 
     @staticmethod
     def try_crop_image_with_a1111_mask(
@@ -165,9 +154,9 @@ class ControlNetForForgeOfficial(scripts.Script):
     def get_input_data(self, p, unit, preprocessor, h, w):
         logger.info(f'ControlNet Input Mode: {unit.input_mode}')
         image_list = []
-        resize_mode = unit.resize_mode
+        resize_mode = external_code.resize_mode_from_value(unit.resize_mode)
 
-        if unit.input_mode == InputMode.MERGE:
+        if unit.input_mode == external_code.InputMode.MERGE:
             for idx, item in enumerate(unit.batch_input_gallery):
                 img_path = item[0]
                 logger.info(f'Try to read image: {img_path}')
@@ -181,7 +170,7 @@ class ControlNetForForgeOfficial(scripts.Script):
                     mask = np.ascontiguousarray(cv2.imread(mask_path)[:, :, ::-1]).copy()
                 if img is not None:
                     image_list.append([img, mask])
-        elif unit.input_mode == InputMode.BATCH:
+        elif unit.input_mode == external_code.InputMode.BATCH:
             image_list = []
             image_extensions = ['.jpg', '.jpeg', '.png', '.bmp']
             batch_image_files = shared.listfiles(unit.batch_image_dir)
@@ -357,7 +346,7 @@ class ControlNetForForgeOfficial(scripts.Script):
                 break
 
         if has_high_res_fix:
-            hr_option = unit.hr_option
+            hr_option = HiResFixOption.from_value(unit.hr_option)
         else:
             hr_option = HiResFixOption.BOTH
 
@@ -448,7 +437,7 @@ class ControlNetForForgeOfficial(scripts.Script):
         )
 
         if has_high_res_fix:
-            hr_option = unit.hr_option
+            hr_option = HiResFixOption.from_value(unit.hr_option)
         else:
             hr_option = HiResFixOption.BOTH
 

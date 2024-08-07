@@ -230,11 +230,6 @@ class ControlNetUnit:
                     "image": mask,
                     "mask": np.zeros_like(mask),
                 }
-        # Convert strings to enums.
-        unit.input_mode = InputMode(unit.input_mode)
-        unit.hr_option = HiResFixOption(unit.hr_option)
-        unit.resize_mode = ResizeMode(unit.resize_mode)
-        unit.control_mode = ControlMode(unit.control_mode)
         return unit
 
 

@@ -589,7 +589,7 @@ class ControlNetUiGroup(object):
 
             for event_subscriber in event_subscribers:
                 event_subscriber(
-                    fn=create_unit, inputs=list(unit_args), outputs=unit
+                    fn=UiControlNetUnit, inputs=list(unit_args), outputs=unit
                 )
 
         (
