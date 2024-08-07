@@ -153,7 +153,7 @@ class IPAdapterPatcher(ControlModelPatcher):
         unet = opIPAdapterApply(
             ipadapter=self.ip_adapter,
             model=unet,
-            weight=weight,
+            weight=self.strength,
             start_at=self.start_percent,
             end_at=self.end_percent,
             faceid_v2=self.faceid_v2,

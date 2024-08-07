@@ -1,6 +1,5 @@
 import torch
 import torch.nn as nn
-from typing import Optional
 
 from backend.nn.unet import timestep_embedding, exists, conv_nd, SpatialTransformer, TimestepEmbedSequential, ResBlock, Downsample
 
@@ -40,8 +39,6 @@ class ControlNet(nn.Module):
             **kwargs,
     ):
         super().__init__()
-        self.model_file_name = model_file_name
-
         assert use_spatial_transformer == True, "use_spatial_transformer has to be true"
         if use_spatial_transformer:
             assert context_dim is not None, 'Fool!! You forgot to include the dimension of your cross-attention conditioning...'
