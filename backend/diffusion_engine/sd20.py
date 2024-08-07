@@ -10,18 +10,18 @@ from backend.args import dynamic_args
 from backend import memory_management
 
 
-class StableDiffusion(ForgeDiffusionEngine):
-    matched_guesses = [model_list.SD15]
+class StableDiffusion2(ForgeDiffusionEngine):
+    matched_guesses = [model_list.SD20]
 
     def __init__(self, estimated_config, huggingface_components):
         super().__init__(estimated_config, huggingface_components)
 
         clip = CLIP(
             model_dict={
-                'clip_l': huggingface_components['text_encoder']
+                'clip_h': huggingface_components['text_encoder']
             },
             tokenizer_dict={
-                'clip_l': huggingface_components['tokenizer']
+                'clip_h': huggingface_components['tokenizer']
             }
         )
 
@@ -33,11 +33,11 @@ class StableDiffusion(ForgeDiffusionEngine):
         )
 
         self.text_processing_engine = ClassicTextProcessingEngine(
-            text_encoder=clip.cond_stage_model.clip_l,
-            tokenizer=clip.tokenizer.clip_l,
+            text_encoder=clip.cond_stage_model.clip_h,
+            tokenizer=clip.tokenizer.clip_h,
             embedding_dir=dynamic_args['embedding_dir'],
-            embedding_key='clip_l',
-            embedding_expected_shape=768,
+            embedding_key='clip_h',
+            embedding_expected_shape=1024,
             emphasis_name=dynamic_args['emphasis_name'],
             text_projection=False,
             minimal_clip_skip=1,
@@ -51,9 +51,12 @@ class StableDiffusion(ForgeDiffusionEngine):
         self.forge_objects_after_applying_lora = self.forge_objects.shallow_copy()
 
         # WebUI Legacy
-        self.is_sd1 = True
+        self.is_sd2 = True
         self.first_stage_model = vae.first_stage_model
         self.alphas_cumprod = unet.model.predictor.alphas_cumprod
+
+        if not self.is_inpaint:
+            self.parameterization = 'v'
 
     def set_clip_skip(self, clip_skip):
         self.text_processing_engine.clip_skip = clip_skip
