@@ -377,6 +377,7 @@ def prepare_environment():
             "TORCH_COMMAND",
             f"pip install torch==2.3.0 torchvision --index-url {torch_index_url}",
         )
+   
     elif args.use_ipex:
         backend = "ipex"
         if platform.system() == "Windows":
@@ -412,7 +413,8 @@ def prepare_environment():
                 "TORCH_COMMAND",
                 f"pip install torch==2.2.0 torchvision==0.17.0 --extra-index-url {torch_index_url}",
             )
-        elif hip_found: # ZLUDA
+        elif system == "Windows" and hip_found: # ZLUDA
+            args.use_zluda = True
             print("ROCm Toolkit was found.")
             backend = "cuda"
             torch_index_url = os.environ.get(
@@ -426,11 +428,11 @@ def prepare_environment():
             print("ROCm Toolkit was found.")
             backend = "rocm"
             torch_index_url = os.environ.get(
-                "TORCH_INDEX_URL", "https://download.pytorch.org/whl/rocm5.4.2"
+                "TORCH_INDEX_URL", "https://download.pytorch.org/whl/rocm6.0"
             )
             torch_command = os.environ.get(
                 "TORCH_COMMAND",
-                f"pip install torch==2.0.1 torchvision==0.15.2 --index-url {torch_index_url}",
+                f"pip install torch==2.3.0 torchvision --index-url {torch_index_url}",
             )
     
     
@@ -474,11 +476,33 @@ def prepare_environment():
     print(f"Python {sys.version}")
     print(f"Version: {tag}")
     print(f"Commit hash: {commit}")
+    
 
     if args.reinstall_torch or not is_installed("torch") or not is_installed("torchvision"):
         run(f'"{python}" -m {torch_command}', "Installing torch and torchvision", "Couldn't install torch", live=True)
         startup_timer.record("install torch")
-        patch_zluda()
+    
+    if args.use_zluda:
+        error = None
+        from modules import zluda_installer
+        try:
+            zluda_path = zluda_installer.get_path()
+            zluda_installer.install(zluda_path)
+            zluda_installer.make_copy(zluda_path)
+        except Exception as e:
+            error = e
+            print(f'Failed to install ZLUDA: {e}')
+        if error is None:
+            try:
+                zluda_installer.load(zluda_path)
+                torch_command = os.environ.get('TORCH_COMMAND', 'pip install torch==2.3.0 torchvision --index-url https://download.pytorch.org/whl/cu118')
+                print(f'Using ZLUDA in {zluda_path}')
+            except Exception as e:
+                error = e
+                print(f'Failed to load ZLUDA: {e}')
+        if error is not None:
+            print('Using CPU-only torch')
+            torch_command = os.environ.get('TORCH_COMMAND', 'pip install torch torchvision')
 
 
     if not args.skip_torch_cuda_test and not check_run_python("import torch; assert torch.cuda.is_available()"):
@@ -634,7 +658,7 @@ def get_onnxruntime_source_for_rocm(rocm_ver):
     return f"https://download.onnxruntime.ai/onnxruntime_training-{ort_version}%2Brocm{rocm_ver[0]}{rocm_ver[1]}-cp{cp_str}-cp{cp_str}-manylinux_2_17_x86_64.manylinux2014_x86_64.whl"
 
 
-def patch_zluda():
+def find_zluda():
     zluda_path = os.environ.get('ZLUDA', None)
     if zluda_path is None:
         paths = os.environ.get('PATH', '').split(';')
@@ -642,10 +666,18 @@ def patch_zluda():
             if os.path.exists(os.path.join(path, 'zluda_redirect.dll')):
                 zluda_path = path
                 break
+    return zluda_path
+
+
+def patch_zluda():
+    zluda_path = find_zluda()
     if zluda_path is None:
         print('Failed to automatically patch torch with ZLUDA. Could not find ZLUDA from PATH.')
         return
-    venv_dir = os.environ.get('VENV_DIR', os.path.dirname(shutil.which('python')))
+    python_dir = os.path.dirname(shutil.which('python'))
+    if shutil.which('conda') is None:
+        python_dir = os.path.dirname(python_dir)
+    venv_dir = os.environ.get('VENV_DIR', python_dir)
     dlls_to_patch = {
         'cublas.dll': 'cublas64_11.dll',
         #'cudnn.dll': 'cudnn64_8.dll',
