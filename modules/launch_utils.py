@@ -375,7 +375,7 @@ def prepare_environment():
         )
         torch_command = os.environ.get(
             "TORCH_COMMAND",
-            f"pip install torch==2.3.0 torchvision --index-url {torch_index_url}",
+            f"pip install torch==2.3.1 torchvision --index-url {torch_index_url}",
         )
     elif args.use_ipex:
         if platform.system() == "Windows":
@@ -420,7 +420,7 @@ def prepare_environment():
             )
             torch_command = os.environ.get(
                 "TORCH_COMMAND",
-                f"pip install torch==2.3.0 torchvision --index-url {torch_index_url}",
+                f"pip install torch==2.3.1 torchvision --index-url {torch_index_url}",
             )
         elif rocm_found:
             print("ROCm Toolkit was found.")
