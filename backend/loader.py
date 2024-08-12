@@ -37,9 +37,14 @@ def load_huggingface_component(guess, component_name, lib_name, cls_name, repo_p
         return None
 
     if lib_name in ['transformers', 'diffusers']:
-        if component_name in ['scheduler'] or component_name.startswith('tokenizer'):
+        if component_name in ['scheduler']:
             cls = getattr(importlib.import_module(lib_name), cls_name)
             return cls.from_pretrained(os.path.join(repo_path, component_name))
+        if component_name.startswith('tokenizer'):
+            cls = getattr(importlib.import_module(lib_name), cls_name)
+            comp = cls.from_pretrained(os.path.join(repo_path, component_name))
+            comp._eventual_warn_about_too_long_sequence = lambda *args, **kwargs: None
+            return comp
         if cls_name in ['AutoencoderKL']:
             config = IntegratedAutoencoderKL.load_config(config_path)
 
@@ -172,7 +177,11 @@ def split_state_dict(sd, sd_vae=None):
 
 @torch.no_grad()
 def forge_loader(sd, sd_vae=None):
-    state_dicts, estimated_config = split_state_dict(sd, sd_vae=sd_vae)
+    try:
+        state_dicts, estimated_config = split_state_dict(sd, sd_vae=sd_vae)
+    except:
+        raise ValueError('Failed to recognize model type!')
+    
     repo_name = estimated_config.huggingface_repo
 
     local_path = os.path.join(dir_path, 'huggingface', repo_name)
