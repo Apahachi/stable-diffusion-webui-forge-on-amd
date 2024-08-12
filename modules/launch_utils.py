@@ -368,7 +368,7 @@ def prepare_environment():
     backend = "cuda"
    
     if args.use_zluda:
-        print('WARNING: ZLUDA works , You are on an amazing Journey ,Engjoy it ')
+        print(' ZLUDA works , You are on an amazing Journey ,Engjoy it ')
         backend = "cuda"
         torch_index_url = os.environ.get(
             "TORCH_INDEX_URL", "https://download.pytorch.org/whl/cu118"
@@ -492,7 +492,7 @@ def prepare_environment():
         if error is None:
             try:
                 zluda_installer.load(zluda_path)
-                torch_command = os.environ.get('TORCH_COMMAND', 'pip install torch==2.3.0 torchvision --index-url https://download.pytorch.org/whl/cu118')
+                torch_command = os.environ.get('TORCH_COMMAND', 'pip install torch==2.3.1 torchvision --index-url https://download.pytorch.org/whl/cu118')
                 print(f'Using ZLUDA in {zluda_path}')
             except Exception as e:
                 error = e

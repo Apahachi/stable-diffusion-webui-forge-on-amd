@@ -3,7 +3,7 @@
 set PYTHON=
 set GIT=
 set VENV_DIR=
-set COMMANDLINE_ARGS= --use-zluda --cuda-stream --theme dark
+set COMMANDLINE_ARGS= --use-zluda --cuda-stream  --theme dark
 
 @REM Uncomment following code to reference an existing A1111 checkout.
 @REM set A1111_HOME=Your A1111 checkout dir
