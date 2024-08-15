@@ -1,12 +1,14 @@
-# Model Patching API Template Extracted From ComfyUI
-# The actual implementation for those APIs are from Forge, implemented from scratch (after forge-v1.0.1),
-# and may have certain level of differences.
+# Model Patching System, Copyright Forge 2024
+
+# API Templates partially extracted From ComfyUI, the actual implementation for those APIs
+# are from Forge, implemented from scratch (after forge-v1.0.1), and may have
+# certain level of differences.
 
 import torch
 import copy
 import inspect
 
-from backend import memory_management, utils
+from backend import memory_management, utils, operations
 from backend.patcher.lora import merge_lora_to_model_weight
 
 
@@ -47,7 +49,7 @@ def set_model_options_pre_cfg_function(model_options, pre_cfg_function, disable_
 
 
 class ModelPatcher:
-    def __init__(self, model, load_device, offload_device, size=0, current_device=None, weight_inplace_update=False):
+    def __init__(self, model, load_device, offload_device, size=0, current_device=None, **kwargs):
         self.size = size
         self.model = model
         self.patches = {}
@@ -63,8 +65,6 @@ class ModelPatcher:
         else:
             self.current_device = current_device
 
-        self.weight_inplace_update = weight_inplace_update
-
     def model_size(self):
         if self.size > 0:
             return self.size
@@ -72,7 +72,7 @@ class ModelPatcher:
         return self.size
 
     def clone(self):
-        n = ModelPatcher(self.model, self.load_device, self.offload_device, self.size, self.current_device, weight_inplace_update=self.weight_inplace_update)
+        n = ModelPatcher(self.model, self.load_device, self.offload_device, self.size, self.current_device)
         n.patches = {}
         for k in self.patches:
             n.patches[k] = self.patches[k][:]
@@ -236,64 +236,91 @@ class ModelPatcher:
                     sd.pop(k)
         return sd
 
-    def patch_model(self, device_to=None):
-        for k in self.object_patches:
+    def forge_patch_model(self, target_device=None):
+        for k, item in self.object_patches.items():
             old = utils.get_attr(self.model, k)
+
             if k not in self.object_patches_backup:
                 self.object_patches_backup[k] = old
-            utils.set_attr_raw(self.model, k, self.object_patches[k])
 
-        model_state_dict = self.model_state_dict()
+            utils.set_attr_raw(self.model, k, item)
 
         for key, current_patches in self.patches.items():
-            assert key in model_state_dict, f"Wrong LoRA Key: {key}"
-
-            weight = model_state_dict[key]
-
-            if weight.dtype == torch.uint8:
-                raise NotImplementedError('LoRAs for NF4/FP4 models are under construction and not available now.\nSorry for the inconvenience!')
-
-            inplace_update = self.weight_inplace_update
+            try:
+                weight = utils.get_attr(self.model, key)
+                assert isinstance(weight, torch.nn.Parameter)
+            except:
+                raise ValueError(f"Wrong LoRA Key: {key}")
 
             if key not in self.backup:
-                self.backup[key] = weight.to(device=self.offload_device, copy=inplace_update)
+                self.backup[key] = weight.to(device=self.offload_device)
 
-            if device_to is not None:
-                temp_weight = memory_management.cast_to_device(weight, device_to, torch.float32, copy=True)
-            else:
-                temp_weight = weight.to(torch.float32, copy=True)
+            bnb_layer = None
 
-            out_weight = merge_lora_to_model_weight(current_patches, temp_weight, key).to(weight.dtype)
+            if operations.bnb_avaliable:
+                if hasattr(weight, 'bnb_quantized'):
+                    assert weight.module is not None, 'BNB bad weight without parent layer!'
+                    bnb_layer = weight.module
+                    if weight.bnb_quantized:
+                        weight_original_device = weight.device
 
-            if inplace_update:
-                utils.copy_to_param(self.model, key, out_weight)
-            else:
-                utils.set_attr(self.model, key, out_weight)
+                        if target_device is not None:
+                            assert target_device.type == 'cuda', 'BNB Must use CUDA!'
+                            weight = weight.to(target_device)
+                        else:
+                            weight = weight.cuda()
 
-        if device_to is not None:
-            self.model.to(device_to)
-            self.current_device = device_to
+                        from backend.operations_bnb import functional_dequantize_4bit
+                        weight = functional_dequantize_4bit(weight)
+
+                        if target_device is None:
+                            weight = weight.to(device=weight_original_device)
+                    else:
+                        weight = weight.data
+
+            weight_original_dtype = weight.dtype
+            to_args = dict(dtype=torch.float32)
+
+            if target_device is not None:
+                to_args['device'] = target_device
+                to_args['non_blocking'] = memory_management.device_supports_non_blocking(target_device)
+
+            weight = weight.to(**to_args)
+            out_weight = merge_lora_to_model_weight(current_patches, weight, key).to(dtype=weight_original_dtype)
+
+            if bnb_layer is not None:
+                bnb_layer.reload_weight(out_weight)
+                continue
+
+            utils.set_attr_raw(self.model, key, torch.nn.Parameter(out_weight, requires_grad=False))
+
+        if target_device is not None:
+            self.model.to(target_device)
+            self.current_device = target_device
 
         return self.model
 
-    def unpatch_model(self, device_to=None):
+    def forge_unpatch_model(self, target_device=None):
         keys = list(self.backup.keys())
 
-        if self.weight_inplace_update:
-            for k in keys:
-                utils.copy_to_param(self.model, k, self.backup[k])
-        else:
-            for k in keys:
-                utils.set_attr(self.model, k, self.backup[k])
+        for k in keys:
+            w = self.backup[k]
+
+            if not isinstance(w, torch.nn.Parameter):
+                # In very few cases
+                w = torch.nn.Parameter(w, requires_grad=False)
+
+            utils.set_attr_raw(self.model, k, w)
 
         self.backup = {}
 
-        if device_to is not None:
-            self.model.to(device_to)
-            self.current_device = device_to
+        if target_device is not None:
+            self.model.to(target_device)
+            self.current_device = target_device
 
         keys = list(self.object_patches_backup.keys())
         for k in keys:
             utils.set_attr_raw(self.model, k, self.object_patches_backup[k])
 
         self.object_patches_backup = {}
+        return
