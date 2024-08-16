@@ -21,11 +21,11 @@ ui_forge_pin_shared_memory: gr.Radio = None
 ui_forge_inference_memory: gr.Slider = None
 
 forge_unet_storage_dtype_options = {
-    'Auto': None,
-    'nf4': 'nf4',
-    'fp8e4': torch.float8_e4m3fn,
-    'fp4': 'fp4',
-    'fp8e5': torch.float8_e5m2,
+    'Automatic': None,
+    'bnb-nf4': 'nf4',
+    'float8-e4m3fn': torch.float8_e4m3fn,
+    'bnb-fp4': 'fp4',
+    'float8-e5m2': torch.float8_e5m2,
 }
 
 module_list = {}
@@ -94,7 +94,7 @@ def make_checkpoint_manager_ui():
 
     ui_vae.render()
 
-    ui_forge_unet_storage_dtype_options = gr.Radio(label="Diffusion with Low Bits", value=lambda: shared.opts.forge_unet_storage_dtype, choices=list(forge_unet_storage_dtype_options.keys()))
+    ui_forge_unet_storage_dtype_options = gr.Dropdown(label="Diffusion in Low Bits", value=lambda: shared.opts.forge_unet_storage_dtype, choices=list(forge_unet_storage_dtype_options.keys()))
     bind_to_opts(ui_forge_unet_storage_dtype_options, 'forge_unet_storage_dtype', save=True, callback=refresh_model_loading_parameters)
 
     ui_forge_async_loading = gr.Radio(label="Swap Method", value=lambda: shared.opts.forge_async_loading, choices=['Queue', 'Async'])
@@ -272,7 +272,7 @@ def on_preset_change(preset=None):
         return [
             gr.update(visible=True),  # ui_vae
             gr.update(visible=True, value=1),  # ui_clip_skip
-            gr.update(visible=False, value='Auto'),  # ui_forge_unet_storage_dtype_options
+            gr.update(visible=False, value='Automatic'),  # ui_forge_unet_storage_dtype_options
             gr.update(visible=False, value='Queue'),  # ui_forge_async_loading
             gr.update(visible=False, value='CPU'),  # ui_forge_pin_shared_memory
             gr.update(visible=False, value=total_vram - 1024),  # ui_forge_inference_memory
@@ -294,7 +294,7 @@ def on_preset_change(preset=None):
         return [
             gr.update(visible=True),  # ui_vae
             gr.update(visible=False, value=1),  # ui_clip_skip
-            gr.update(visible=True, value='Auto'),  # ui_forge_unet_storage_dtype_options
+            gr.update(visible=True, value='Automatic'),  # ui_forge_unet_storage_dtype_options
             gr.update(visible=False, value='Queue'),  # ui_forge_async_loading
             gr.update(visible=False, value='CPU'),  # ui_forge_pin_shared_memory
             gr.update(visible=False, value=total_vram - 1024),  # ui_forge_inference_memory
@@ -316,7 +316,7 @@ def on_preset_change(preset=None):
         return [
             gr.update(visible=True),  # ui_vae
             gr.update(visible=False, value=1),  # ui_clip_skip
-            gr.update(visible=True, value='Auto'),  # ui_forge_unet_storage_dtype_options
+            gr.update(visible=True, value='Automatic'),  # ui_forge_unet_storage_dtype_options
             gr.update(visible=True, value='Queue'),  # ui_forge_async_loading
             gr.update(visible=True, value='CPU'),  # ui_forge_pin_shared_memory
             gr.update(visible=True, value=total_vram - 1024),  # ui_forge_inference_memory
@@ -337,7 +337,7 @@ def on_preset_change(preset=None):
     return [
         gr.update(visible=True),  # ui_vae
         gr.update(visible=True, value=1),  # ui_clip_skip
-        gr.update(visible=True, value='Auto'),  # ui_forge_unet_storage_dtype_options
+        gr.update(visible=True, value='Automatic'),  # ui_forge_unet_storage_dtype_options
         gr.update(visible=True, value='Queue'),  # ui_forge_async_loading
         gr.update(visible=True, value='CPU'),  # ui_forge_pin_shared_memory
         gr.update(visible=True, value=total_vram - 1024),  # ui_forge_inference_memory

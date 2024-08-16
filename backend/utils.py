@@ -1,8 +1,10 @@
+import gguf
 import torch
 import os
 import json
 import safetensors.torch
 import backend.misc.checkpoint_pickle
+from backend.operations_gguf import ParameterGGUF
 
 
 def read_arbitrary_config(directory):
@@ -22,6 +24,11 @@ def load_torch_file(ckpt, safe_load=False, device=None):
         device = torch.device("cpu")
     if ckpt.lower().endswith(".safetensors"):
         sd = safetensors.torch.load_file(ckpt, device=device.type)
+    elif ckpt.lower().endswith(".gguf"):
+        reader = gguf.GGUFReader(ckpt)
+        sd = {}
+        for tensor in reader.tensors:
+            sd[str(tensor.name)] = ParameterGGUF(tensor)
     else:
         if safe_load:
             if not 'weights_only' in torch.load.__code__.co_varnames:
