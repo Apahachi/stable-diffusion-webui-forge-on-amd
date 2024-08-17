@@ -76,12 +76,28 @@ def get_attr(obj, attr):
     return obj
 
 
+def get_attr_with_parent(obj, attr):
+    attrs = attr.split(".")
+    parent = obj
+    for name in attrs:
+        parent = obj
+        obj = getattr(obj, name)
+    return parent, obj
+
+
 def calculate_parameters(sd, prefix=""):
     params = 0
     for k in sd.keys():
         if k.startswith(prefix):
             params += sd[k].nelement()
     return params
+
+
+def tensor2parameter(x):
+    if isinstance(x, torch.nn.Parameter):
+        return x
+    else:
+        return torch.nn.Parameter(x, requires_grad=False)
 
 
 def fp16_fix(x):

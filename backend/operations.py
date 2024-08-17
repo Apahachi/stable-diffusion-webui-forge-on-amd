@@ -4,7 +4,7 @@ import time
 import torch
 import contextlib
 
-from backend import stream, memory_management
+from backend import stream, memory_management, utils
 
 
 stash = {}
@@ -303,8 +303,6 @@ try:
                 self.parameters_manual_cast = current_manual_cast_enabled
 
             def forward(self, x):
-                self.weight.quant_state = self.quant_state
-
                 if self.bias is not None and self.bias.dtype != x.dtype:
                     # Maybe this can also be set to all non-bnb ops since the cost is very low.
                     # And it only invokes one time, and most linear does not have bias
@@ -357,10 +355,10 @@ class ForgeOperationsGGUF(ForgeOperations):
 
         def _apply(self, fn, recurse=True):
             if self.weight is not None:
-                self.weight = fn(self.weight)
+                self.weight = utils.tensor2parameter(fn(self.weight))
             if self.bias is not None:
-                self.bias = fn(self.bias)
-            return super()._apply(fn, recurse=recurse)
+                self.bias = utils.tensor2parameter(fn(self.bias))
+            return self
 
         def forward(self, x):
             if self.parameters_manual_cast:
