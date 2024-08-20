@@ -111,9 +111,10 @@ gradio.component_meta.updateable = lambda x: x
 class EventWrapper:
     def __init__(self, replaced_event):
         self.replaced_event = replaced_event
-        self.has_trigger = replaced_event.has_trigger
-        self.event_name = replaced_event.event_name
-        self.callback = replaced_event.callback
+        self.has_trigger = getattr(replaced_event, 'has_trigger', None)
+        self.event_name = getattr(replaced_event, 'event_name', None)
+        self.callback = getattr(replaced_event, 'callback', None)
+        self.real_self = getattr(replaced_event, '__self__', None)
 
     def __call__(self, *args, **kwargs):
         if '_js' in kwargs:
@@ -123,7 +124,7 @@ class EventWrapper:
 
     @property
     def __self__(self):
-        return self.replaced_event.__self__
+        return self.real_self
 
 
 def repair(grclass):
