@@ -76,10 +76,21 @@ Forge is currently based on SD-WebUI 1.10.1 at [this commit](https://github.com/
 
 Note:FLUX use ,please refer to (here)[https://github.com/lllyasviel/stable-diffusion-webui-forge/discussions/1050] NT 4 currently not support zluda. please use fp8 dev models.
 # News
+# Quick List
 
-Aug 15: Flux BNB NF4 / GGUF Q8_0/Q5_0/Q5_1/Q4_0/Q4_1 are all natively supported with GPU weight slider and Quene/Async Swap toggle and swap location toggle.
+[Gradio 4 UI Must Read (TLDR: You need to use RIGHT MOUSE BUTTON to move canvas!)](https://github.com/lllyasviel/stable-diffusion-webui-forge/discussions/853)
 
-Aug 15: All Flux BNB NF4 / GGUF Q8_0/Q5_0/Q4_0 have LoRA support.
+[Flux Tutorial (BitsandBytes Models, NF4, VRAM management UI, etc)](https://github.com/lllyasviel/stable-diffusion-webui-forge/discussions/981)
+
+[Flux Tutorial 2 (Seperated Full Models, GGUF, Technically Correct Comparison between GGUF and NF4, etc)](https://github.com/lllyasviel/stable-diffusion-webui-forge/discussions/1050)
+
+[(Save Flux BitsandBytes UNet/Checkpoint)](https://github.com/lllyasviel/stable-diffusion-webui-forge/discussions/1224#discussioncomment-10384104)
+
+[LayerDiffuse Transparent Image Editing](https://github.com/lllyasviel/stable-diffusion-webui-forge/discussions/854)
+
+[(Policy) Soft Advertisement Removal Policy](https://github.com/lllyasviel/stable-diffusion-webui-forge/discussions/1286)
+
+(Flux BNB NF4 / GGUF Q8_0/Q5_0/Q5_1/Q4_0/Q4_1 are all natively supported with GPU weight slider and Quene/Async Swap toggle and swap location toggle. All Flux BNB NF4 / GGUF Q8_0/Q5_0/Q4_0 have LoRA support.)
 
 # Installing Forge
 
