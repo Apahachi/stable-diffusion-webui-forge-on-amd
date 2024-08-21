@@ -5,7 +5,6 @@ import time
 import socket
 import gradio as gr
 import importlib.util
-import shutil
 
 from gradio.context import Context
 from threading import Thread
@@ -42,6 +41,28 @@ def find_free_port(server_name, start_port=None):
                 return port
             except OSError:
                 port += 1
+
+
+def remove_dir(dir_path):
+    for root, dirs, files in os.walk(dir_path, topdown=False):
+        for name in files:
+            try:
+                os.remove(os.path.join(root, name))
+            except Exception as e:
+                print(f"Error removing file {os.path.join(root, name)}: {e}")
+
+        for name in dirs:
+            try:
+                os.rmdir(os.path.join(root, name))
+            except Exception as e:
+                print(f"Error removing directory {os.path.join(root, name)}: {e}")
+
+    try:
+        os.rmdir(dir_path)
+        print(f"Deleted: {dir_path}")
+    except:
+        print(f'Something went wrong when trying to delete a folder. You may try to manually delete the folder [{dir_path}].')
+    return
 
 
 class ForgeSpace:
@@ -115,11 +136,13 @@ class ForgeSpace:
             from modules.launch_utils import run_pip
             run_pip(f'install -r "{requirements_filename}"', desc=f"space requirements for [{self.title}]")
 
+        print(f'Install finished: {self.title}')
+
         return self.refresh_gradio()
 
     def uninstall(self):
-        shutil.rmtree(self.hf_path)
-        print(f'Deleted: {self.hf_path}')
+        remove_dir(self.hf_path)
+        print('Uninstall finished. You can also manually delete some diffusers models in "/models/diffusers" to release more spaces, but those diffusers models may be reused by other spaces or extensions. ')
         return self.refresh_gradio()
 
     def terminate(self):
@@ -141,8 +164,13 @@ class ForgeSpace:
         original_cwd = os.getcwd()
         os.chdir(self.hf_path)
 
-        if 'models' in sys.modules:
-            del sys.modules['models']
+        unsafe_module_prefixes = ['models', 'annotator']
+        modules_backup = {}
+
+        for module_name in list(sys.modules.keys()):
+            if any(module_name.startswith(prefix + '.') or module_name == prefix for prefix in unsafe_module_prefixes):
+                modules_backup[module_name] = sys.modules[module_name]
+                del sys.modules[module_name]
 
         memory_management.unload_all_models()
         sys.path.insert(0, self.hf_path)
@@ -167,8 +195,7 @@ class ForgeSpace:
             server_port=port
         )
 
-        if module_name in sys.modules:
-            del sys.modules[module_name]
+        sys.modules.update(modules_backup)
 
         if 'models' in sys.modules:
             del sys.modules['models']
