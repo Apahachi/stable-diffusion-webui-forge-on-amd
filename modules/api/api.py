@@ -25,7 +25,7 @@ from modules.textual_inversion.textual_inversion import create_embedding
 from PIL import PngImagePlugin
 from modules.realesrgan_model import get_realesrgan_models
 from modules import devices
-from typing import Any
+from typing import Any, Union, get_origin, get_args
 import piexif
 import piexif.helper
 from contextlib import closing
@@ -371,13 +371,24 @@ class Api:
         set_fields = request.model_dump(exclude_unset=True) if hasattr(request, "request") else request.dict(exclude_unset=True)  # pydantic v1/v2 have different names for this
         params = infotext_utils.parse_generation_parameters(request.infotext)
 
+        def get_base_type(annotation):
+            origin = get_origin(annotation)
+            
+            if origin is Union:             # represents Optional
+                args = get_args(annotation) # filter out NoneType
+                non_none_args = [arg for arg in args if arg is not type(None)]
+                if len(non_none_args) == 1: # annotation was Optional[X]
+                    return non_none_args[0]
+
+            return annotation
+
         def get_field_value(field, params):
             value = field.function(params) if field.function else params.get(field.label)
             if value is None:
                 return None
 
             if field.api in request.__fields__:
-                target_type = request.__fields__[field.api].type_
+                target_type = get_base_type(request.__fields__[field.api].annotation) # extract type from Optional[X]
             else:
                 target_type = type(field.component.value)
 
@@ -721,7 +732,7 @@ class Api:
 
     def get_sd_models(self):
         import modules.sd_models as sd_models
-        return [{"title": x.title, "model_name": x.model_name, "hash": x.shorthash, "sha256": x.sha256, "filename": x.filename} for x in sd_models.checkpoints_list.values()]
+        return [{"title": x.title, "model_name": x.model_name, "hash": x.shorthash, "sha256": x.sha256, "filename": x.filename, "config": getattr(x, 'config', None)} for x in sd_models.checkpoints_list.values()]
 
     def get_sd_vaes(self):
         import modules.sd_vae as sd_vae

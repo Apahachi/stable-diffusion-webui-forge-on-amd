@@ -405,7 +405,12 @@ class LoadedModel:
                         mem_counter += module_mem
                     else:
                         memory_in_swap += module_mem
+
+                        if hasattr(m, 'weight') and hasattr(m.weight, 'bnb_quantized') and not m.weight.bnb_quantized and self.device.type == 'cuda':
+                            m.to(self.device)  # Quantize happens here
+
                         m.to(self.model.offload_device)
+
                         if PIN_SHARED_MEMORY and is_device_cpu(self.model.offload_device):
                             m._apply(lambda x: x.pin_memory())
                 elif hasattr(m, "weight"):
@@ -469,8 +474,12 @@ def unload_model_clones(model):
         current_loaded_models.pop(i).model_unload(avoid_model_moving=True)
 
 
-def free_memory(memory_required, device, keep_loaded=[]):
-    print(f"[Unload] Trying to free {memory_required / (1024 * 1024):.2f} MB for {device} with {len(keep_loaded)} models keep loaded ...")
+def free_memory(memory_required, device, keep_loaded=[], free_all=False):
+    if free_all:
+        memory_required = 1e30
+        print(f"[Unload] Trying to free all memory for {device} with {len(keep_loaded)} models keep loaded ...")
+    else:
+        print(f"[Unload] Trying to free {memory_required / (1024 * 1024):.2f} MB for {device} with {len(keep_loaded)} models keep loaded ...")
 
     offload_everything = ALWAYS_VRAM_OFFLOAD or vram_state == VRAMState.NO_VRAM
     unloaded_model = False
@@ -1087,8 +1096,11 @@ def can_install_bnb():
         return False
 
 
+signal_empty_cache = False
+
+
 def soft_empty_cache(force=False):
-    global cpu_state
+    global cpu_state, signal_empty_cache
     if cpu_state == CPUState.MPS:
         torch.mps.empty_cache()
     elif is_intel_xpu():
@@ -1097,7 +1109,9 @@ def soft_empty_cache(force=False):
         if force or is_nvidia():  # This seems to make things worse on ROCm so I only do it for cuda
             torch.cuda.empty_cache()
             torch.cuda.ipc_collect()
+    signal_empty_cache = False
+    return
 
 
 def unload_all_models():
-    free_memory(1e30, get_torch_device())
+    free_memory(1e30, get_torch_device(), free_all=True)

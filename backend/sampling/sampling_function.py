@@ -187,6 +187,9 @@ def calc_cond_uncond_batch(model, cond, uncond, x_in, timestep, model_options):
         to_batch_temp.reverse()
         to_batch = to_batch_temp[:1]
 
+        if memory_management.signal_empty_cache:
+            memory_management.soft_empty_cache()
+
         free_memory = memory_management.get_free_memory(x_in.device)
 
         if (not args.disable_gpu_warning) and x_in.device.type == 'cuda':
@@ -373,7 +376,7 @@ def sampling_prepare(unet, x):
         additional_inference_memory += unet.controlnet_linked_list.inference_memory_requirements(unet.model_dtype())
         additional_model_patchers += unet.controlnet_linked_list.get_models()
 
-    if dynamic_args.get('online_lora', False):
+    if unet.lora_loader.online_mode:
         lora_memory = utils.nested_compute_size(unet.lora_loader.patches)
         additional_inference_memory += lora_memory
 
@@ -381,10 +384,8 @@ def sampling_prepare(unet, x):
         models=[unet] + additional_model_patchers,
         memory_required=unet_inference_memory + additional_inference_memory)
 
-    if dynamic_args.get('online_lora', False):
+    if unet.lora_loader.online_mode:
         utils.nested_move_to_device(unet.lora_loader.patches, device=unet.current_device)
-
-    unet.lora_loader.patches = {}
 
     real_model = unet.model
 
@@ -397,6 +398,8 @@ def sampling_prepare(unet, x):
 
 
 def sampling_cleanup(unet):
+    if unet.lora_loader.online_mode:
+        utils.nested_move_to_device(unet.lora_loader.patches, device=unet.offload_device)
     for cnet in unet.list_controlnets():
         cnet.cleanup()
     cleanup_cache()
