@@ -24,7 +24,7 @@ Initially, the purpose of creating a fork was to make Forge compatible with AMD 
 A list of compatible GPUs can be found[ here](https://rocm.docs.amd.com/projects/install-on-windows/en/develop/reference/system-requirements.html). If your GPU is not on the list, then you may be need to build your own rocblas library to use ZLUDA or used builded library by others (eg,[ this ]( https://github.com/brknsoul/ROCmLibs/raw/main/ROCmLibs.zip?download=).
 ( Note: how to build robclas ? follow the last step)
 
-Also a list of builded rocblas aviable [ here](https://github.com/likelovewant/ROCmLibs-for-gfx1103-AMD780M-APU) ( actually most of them)
+Also a list of builded rocblas available [ here](https://github.com/likelovewant/ROCmLibs-for-gfx1103-AMD780M-APU) ( actually most of them)
 
 Note: If you have an integrated GPU (iGPU), you may need to disable it, or use the HIP_VISIBLE_DEVICES environment variable. OR if you IGPU exactly The apu amd 780M , download this[ file ](https://github.com/likelovewant/ROCmLibs-for-gfx1103-AMD780M-APU)
 For example , Place `rocblas.dll `into `C:\Program Files\AMD\ROCm\5.7\bin`( this fold will appear after install HIP SKD  in next step) replace the origianl one ,replace library within` rocblas\library` , the orignally library can be rename to something else , like , "origlibrary" in case for other uses.
@@ -76,6 +76,23 @@ Forge is currently based on SD-WebUI 1.10.1 at [this commit](https://github.com/
 
 Note:FLUX use ,please refer to (here)[https://github.com/lllyasviel/stable-diffusion-webui-forge/discussions/1050] NT 4 currently not support zluda. please use fp8 dev models.
 # News
+### Forge Issue&Discussion is Under Attack Now
+
+Today, a group of attackers attacked Forge Repo questions/discussions by sending spam files with viruses to all questions/discussions.
+
+As a protection, issue and discussion is in temp outage now. We will resume issues and discussions soon.
+
+Screenshots: 
+
+(DO NOT download any file from those attackers!)
+
+![image](https://github.com/user-attachments/assets/45fa406f-bdc3-4df4-aaa7-1a7544aac342)
+
+![image](https://github.com/user-attachments/assets/c73ecefd-bcb5-42bb-a39e-d0070645b484)
+
+![image](https://github.com/user-attachments/assets/734d47cd-05d8-4ce3-ab21-97f5e3d364ff)
+
+
 # Quick List
 
 [Gradio 4 UI Must Read (TLDR: You need to use RIGHT MOUSE BUTTON to move canvas!)](https://github.com/lllyasviel/stable-diffusion-webui-forge/discussions/853)
