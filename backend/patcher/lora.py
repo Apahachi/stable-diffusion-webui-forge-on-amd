@@ -286,55 +286,24 @@ from backend import operations
 class LoraLoader:
     def __init__(self, model):
         self.model = model
-        self.patches = {}
         self.backup = {}
         self.online_backup = []
-        self.dirty = False
-        self.online_mode = False
-
-    def clear_patches(self):
-        self.patches.clear()
-        self.dirty = True
-        return
-
-    def add_patches(self, patches, strength_patch=1.0, strength_model=1.0):
-        p = set()
-        model_sd = self.model.state_dict()
-
-        for k in patches:
-            offset = None
-            function = None
-
-            if isinstance(k, str):
-                key = k
-            else:
-                offset = k[1]
-                key = k[0]
-                if len(k) > 2:
-                    function = k[2]
-
-            if key in model_sd:
-                p.add(k)
-                current_patches = self.patches.get(key, [])
-                current_patches.append([strength_patch, patches[k], strength_model, offset, function])
-                self.patches[key] = current_patches
-
-        self.dirty = True
-
-        self.online_mode = dynamic_args.get('online_lora', False)
-
-        if hasattr(self.model, 'storage_dtype'):
-            if self.model.storage_dtype in [torch.float32, torch.float16, torch.bfloat16]:
-                self.online_mode = False
-
-        return list(p)
+        self.loaded_hash = str([])
 
     @torch.inference_mode()
-    def refresh(self, offload_device=torch.device('cpu')):
-        if not self.dirty:
+    def refresh(self, lora_patches, offload_device=torch.device('cpu')):
+        hashes = str(list(lora_patches.keys()))
+
+        if hashes == self.loaded_hash:
             return
 
-        self.dirty = False
+        # Merge Patches
+
+        all_patches = {}
+
+        for (_, _, _, online_mode), patches in lora_patches.items():
+            for key, current_patches in patches.items():
+                all_patches[(key, online_mode)] = all_patches.get((key, online_mode), []) + current_patches
 
         # Initialize
 
@@ -362,14 +331,14 @@ class LoraLoader:
 
         # Patch
 
-        for key, current_patches in self.patches.items():
+        for (key, online_mode), current_patches in all_patches.items():
             try:
                 parent_layer, child_key, weight = utils.get_attr_with_parent(self.model, key)
                 assert isinstance(weight, torch.nn.Parameter)
             except:
                 raise ValueError(f"Wrong LoRA Key: {key}")
 
-            if self.online_mode:
+            if online_mode:
                 if not hasattr(parent_layer, 'forge_online_loras'):
                     parent_layer.forge_online_loras = {}
 
@@ -387,13 +356,12 @@ class LoraLoader:
                 from backend.operations_bnb import functional_dequantize_4bit
                 weight = functional_dequantize_4bit(weight)
 
-            gguf_cls, gguf_type, gguf_real_shape = None, None, None
+            gguf_cls = getattr(weight, 'gguf_cls', None)
+            gguf_parameter = None
 
-            if hasattr(weight, 'is_gguf'):
+            if gguf_cls is not None:
+                gguf_parameter = weight
                 from backend.operations_gguf import dequantize_tensor
-                gguf_cls = weight.gguf_cls
-                gguf_type = weight.gguf_type
-                gguf_real_shape = weight.gguf_real_shape
                 weight = dequantize_tensor(weight)
 
             try:
@@ -409,17 +377,9 @@ class LoraLoader:
                 continue
 
             if gguf_cls is not None:
-                from backend.operations_gguf import ParameterGGUF
-                weight = gguf_cls.quantize_pytorch(weight, gguf_real_shape)
-                weight = ParameterGGUF.make(
-                    data=weight,
-                    gguf_type=gguf_type,
-                    gguf_cls=gguf_cls,
-                    gguf_real_shape=gguf_real_shape,
-                    parent=parent_layer
-                )
-                gguf_cls.bake_layer(parent_layer, weight, gguf_cls.computation_dtype)
-                utils.set_attr_raw(self.model, key, weight)
+                gguf_parameter.data = gguf_cls.quantize_pytorch(weight, gguf_parameter.shape)
+                gguf_parameter.baked = False
+                gguf_cls.bake(gguf_parameter)
                 continue
 
             utils.set_attr_raw(self.model, key, torch.nn.Parameter(weight, requires_grad=False))
@@ -427,11 +387,5 @@ class LoraLoader:
         # End
 
         set_parameter_devices(self.model, parameter_devices=parameter_devices)
-
-        if len(self.patches) > 0:
-            if self.online_mode:
-                print(f'Patched LoRAs on-the-fly; ', end='')
-            else:
-                print(f'Patched LoRAs by precomputing model weights; ', end='')
-
+        self.loaded_hash = hashes
         return
