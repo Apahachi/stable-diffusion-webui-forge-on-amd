@@ -1,9 +1,13 @@
 @echo off
+@REM cd /d %~dp0
+@REM set PYTORCH_TUNABLEOP_ENABLED=1
+@REM set PYTORCH_TUNABLEOP_VERBOSE=1
+@REM set PYTORCH_TUNABLEOP_HIPBLASLT_ENABLED=0
 
 set PYTHON=
 set GIT=
 set VENV_DIR=
-set COMMANDLINE_ARGS= --use-zluda --theme dark
+set COMMANDLINE_ARGS= --use-zluda --theme dark 
 
 @REM Uncomment following code to reference an existing A1111 checkout.
 @REM set A1111_HOME=Your A1111 checkout dir

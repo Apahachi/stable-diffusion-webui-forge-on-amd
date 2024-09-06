@@ -1,4 +1,5 @@
 from typing import Optional
+from copy import copy
 from modules import processing
 from modules.api import api
 
