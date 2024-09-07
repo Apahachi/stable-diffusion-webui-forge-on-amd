@@ -27,14 +27,14 @@ A list of compatible GPUs can be found[ here](https://rocm.docs.amd.com/projects
 Also a list of builded rocblas available [ here](https://github.com/likelovewant/ROCmLibs-for-gfx1103-AMD780M-APU) ( actually most of them)
 
 Note: If you have an integrated GPU (iGPU), you may need to disable it, or use the HIP_VISIBLE_DEVICES environment variable. OR if you IGPU exactly The apu amd 780M , download this[ file ](https://github.com/likelovewant/ROCmLibs-for-gfx1103-AMD780M-APU)
-For example , Place `rocblas.dll `into `C:\Program Files\AMD\ROCm\5.7\bin`( this fold will appear after install HIP SKD  in next step) replace the origianl one ,replace library within` rocblas\library` , the orignally library can be rename to something else , like , "origlibrary" in case for other uses.
+For example , Place `rocblas.dll `into `C:\Program Files\AMD\ROCm\5.7\bin`( this fold will appear after install HIP SKD  in next step,chat the path if you are using different ROCM version ，eg 6.1.2，`C:\Program Files\AMD\ROCm\6.1\bin`) replace the origianl one ,replace library within` rocblas\library` , the orignally library can be rename to something else , like , "origlibrary" in case for other uses.
 
 ## Install HIP SDK
-Download [ HIP SDK 5.7](https://www.amd.com/en/developer/resources/rocm-hub/hip-sdk.html)
+Download [ HIP SDK 5.7/6.1.2](https://www.amd.com/en/developer/resources/rocm-hub/hip-sdk.html)
 
 
 ## Add folders to PATH
-Add the HIP PATH 5.7/bin folder* and %HIP_PATH%bin to your [PATH.]
+Add the HIP PATH 5.7/bin or 6.1/bin folder* and %HIP_PATH%bin to your [PATH.]
 
 Skip zluda steps （ merge lee’s new zluda files ，it fully automatic now）
 Download from[ here](https://github.com/lshqqytiger/ZLUDA/releases/)
@@ -68,11 +68,15 @@ or you may try add extra
  Then apply the change in your code editor( eg VS code) ,where `git stash pop`listed.
 
 Close command prompt and run webui-user.bat again.
-
+# Flux Use on Zluda ，tested work on `Flux-dev-fp8.safetensors`， and `t5xxl_fp8_e4m3fn.safetensors` combination ，Many Flux lora may not working.
 ### if you need build roclabs ,please get support by this [guide](https://github.com/likelovewant/ROCmLibs-for-gfx1103-AMD780M-APU/wiki) .
 
 
 Forge is currently based on SD-WebUI 1.10.1 at [this commit](https://github.com/AUTOMATIC1111/stable-diffusion-webui/commit/82a973c04367123ae98bd9abdf80d9eda9b910e2). (Because original SD-WebUI is almost static now, Forge will sync with original WebUI every 90 days, or when important fixes.)
+
+# News
+
+2024 Sep 7: New sampler `Flux Realistic` is available now! Recommended scheduler is "simple".
 
 # Quick List
 
