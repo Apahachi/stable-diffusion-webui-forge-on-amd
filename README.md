@@ -68,7 +68,7 @@ or you may try add extra
  Then apply the change in your code editor( eg VS code) ,where `git stash pop`listed.
 
 Close command prompt and run webui-user.bat again.
-# Flux Use on Zluda ，tested work on `Flux-dev-fp8.safetensors`， and `t5xxl_fp8_e4m3fn.safetensors` combination ，Many Flux lora may not working.
+### Flux Use on Zluda ，tested work on `Flux-dev-fp8.safetensors`， and `t5xxl_fp8_e4m3fn.safetensors` combination ，Many Flux lora may not working.
 ### if you need build roclabs ,please get support by this [guide](https://github.com/likelovewant/ROCmLibs-for-gfx1103-AMD780M-APU/wiki) .
 
 
