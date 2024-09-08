@@ -22,7 +22,7 @@ Initially, the purpose of creating a fork was to make Forge compatible with AMD 
 
 ## Compatible GPUs
 A list of compatible GPUs can be found[ here](https://rocm.docs.amd.com/projects/install-on-windows/en/develop/reference/system-requirements.html). If your GPU is not on the list, then you may be need to build your own rocblas library to use ZLUDA or used builded library by others (eg,[ this ]( https://github.com/brknsoul/ROCmLibs/raw/main/ROCmLibs.zip?download=).
-( Note: how to build robclas ? follow the last step)
+( Note: how to build robclas ? follow this [guide](https://github.com/likelovewant/ROCmLibs-for-gfx1103-AMD780M-APU/wiki)
 
 Also a list of builded rocblas available [ here](https://github.com/likelovewant/ROCmLibs-for-gfx1103-AMD780M-APU) ( actually most of them)
 
@@ -69,7 +69,7 @@ or you may try add extra
 
 Close command prompt and run webui-user.bat again.
 
-（Flux Use on Zluda ，tested work on `Flux-dev-fp8.safetensors`， and `t5xxl_fp8_e4m3fn.safetensors` combination ，Many Flux loras may not working.）
+（Flux Use on Zluda ，tested work on `Flux-dev-fp8.safetensors`, and `t5xxl_fp8_e4m3fn.safetensors` combination ,Many Flux loras may not working.）
 ### if you need build roclabs ,please get support by this [guide](https://github.com/likelovewant/ROCmLibs-for-gfx1103-AMD780M-APU/wiki) .
 
 
