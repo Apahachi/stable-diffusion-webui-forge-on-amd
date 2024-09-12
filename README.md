@@ -69,7 +69,12 @@ or you may try add extra
 
 Close command prompt and run webui-user.bat again.
 
-（Flux Use on Zluda ，tested work on `Flux-dev-fp8.safetensors`, and `t5xxl_fp8_e4m3fn.safetensors` combination ,Many Flux loras may not working.）
+Flux Use on Zluda ，tested work on `Flux-dev-fp8.safetensors`, and `t5xxl_fp8_e4m3fn.safetensors` combination ,
+`Flux1-dev-Q4_K_S.gguf`，`flux1-dev-Q6_K.gguf `works and others like `Q2,Q3,Q5` also should works except maybe slower than no-quantized files ,`.safetensors`.
+A list of quantized models in GGUF file available at [here](https://huggingface.co/city96/FLUX.1-dev-gguf/tree/main)
+A list of quantized T5 v1.1 XXL encoder model in GGUF file available at [here](https://huggingface.co/city96/t5-v1_1-xxl-encoder-gguf/tree/main)
+Flux loras use need set `Automatic (fp16 LoRA)` in `Diffusion in Low Bits`. Test works for many loras now ,however there are some lora still failed to work.）
+if there is not enough vram , you may increase your virtual memory or use quantized models like Q4 or less .
 ### if you need build roclabs ,please get support by this [guide](https://github.com/likelovewant/ROCmLibs-for-gfx1103-AMD780M-APU/wiki) .
 
 
