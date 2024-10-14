@@ -68,6 +68,16 @@ or you may try add extra
  Then apply the change in your code editor( eg VS code) ,where `git stash pop`listed.
 
 Close command prompt and run `webui-user.bat` again.
+
+Note：For some old cards ,eg rx580 (gfx803),need to downgrad to pytorch to 2.2.1 . by run 
+```
+python -m venv venv
+ .\venv\Scripts\activate
+pip install torch==2.3.1 torchvision --index-url https://download.pytorch.org/whl/cu118
+
+```
+then click the `webui-user.bat` to start . 
+
 > [!IMPORTANT]
 > Flux Use on Zluda ，tested work on `Flux-dev-fp8.safetensors`, and `t5xxl_fp8_e4m3fn.safetensors` combination ,
 `Flux1-dev-Q4_K_S.gguf`，`flux1-dev-Q6_K.gguf `works and others like `Q2,Q3,Q5` also should works except maybe slower than no-quantized files ,`.safetensors`.
