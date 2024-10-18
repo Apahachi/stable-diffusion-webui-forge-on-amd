@@ -20,6 +20,7 @@ from modules import devices, prompt_parser, masking, sd_samplers, lowvram, infot
 from modules.rng import slerp, get_noise_source_type  # noqa: F401
 from modules.sd_samplers_common import images_tensor_to_samples, decode_first_stage, approximation_indexes
 from modules.shared import opts, cmd_opts, state
+from modules.sysinfo import set_config
 import modules.shared as shared
 import modules.paths as paths
 import modules.face_restoration
@@ -818,24 +819,8 @@ def process_images(p: StableDiffusionProcessing) -> Processed:
         if sd_models.checkpoint_aliases.get(p.override_settings.get('sd_model_checkpoint')) is None:
             p.override_settings.pop('sd_model_checkpoint', None)
 
-        temp_memory_changes = {}
-        memory_keys = ['forge_inference_memory', 'forge_async_loading', 'forge_pin_shared_memory']
-
-        for k, v in p.override_settings.items():
-            # options for memory/modules/checkpoints are set in their dedicated functions
-            if k in memory_keys:
-                mem_k = k[len('forge_'):] # remove 'forge_' prefix
-                temp_memory_changes[mem_k] = v
-            elif k == 'forge_additional_modules':
-                main_entry.modules_change(v)
-            elif k == 'sd_model_checkpoint':
-                main_entry.checkpoint_change(v)
-            # set all other options
-            else:
-                opts.set(k, v, is_api=True, run_callbacks=False)
-
-        if temp_memory_changes:
-            main_entry.refresh_memory_management_settings(**temp_memory_changes)
+        # apply any options overrides
+        set_config(p.override_settings, is_api=True, run_callbacks=False, save_config=False)
 
         # load/reload model and manage prompt cache as needed
         manage_model_and_prompt_cache(p)
@@ -850,18 +835,9 @@ def process_images(p: StableDiffusionProcessing) -> Processed:
             res = process_images_inner(p)
 
     finally:
-        # restore opts to original state
+        # restore original options
         if p.override_settings_restore_afterwards:
-            for k, v in stored_opts.items():
-                if k == 'forge_additional_modules':
-                    main_entry.modules_change(v)
-                elif k == 'sd_model_checkpoint':
-                    main_entry.checkpoint_change(v)
-                else:
-                    setattr(opts, k, v)
-
-            if temp_memory_changes:
-                main_entry.refresh_memory_management_settings() # applies the set options by default
+            set_config(stored_opts, save_config=False)
 
     return res
 
@@ -1176,6 +1152,18 @@ def process_images_inner(p: StableDiffusionProcessing) -> Processed:
     return res
 
 
+def process_extra_images(processed:Processed):
+    """used by API processing functions to ensure extra images are PIL image objects"""
+    extra_images = []
+    for img in processed.extra_images:
+        if isinstance(img, np.ndarray):
+            img = Image.fromarray(img)
+        if not Image.isImageType(img):
+            continue
+        extra_images.append(img)
+    processed.extra_images = extra_images
+
+
 def old_hires_fix_first_pass_dimensions(width, height):
     """old algorithm for auto-calculating first pass size"""
 
@@ -1395,7 +1383,14 @@ class StableDiffusionProcessingTxt2Img(StableDiffusionProcessing):
                 decoded_samples = None
 
         with sd_models.SkipWritingToConfig():
-            sd_models.reload_model_weights(info=self.hr_checkpoint_info)
+            if self.hr_checkpoint_name and self.hr_checkpoint_name != 'Use same checkpoint':
+                firstpass_checkpoint = getattr(shared.opts, 'sd_model_checkpoint')
+                if firstpass_checkpoint != self.hr_checkpoint_name:
+                    try:
+                        main_entry.checkpoint_change(self.hr_checkpoint_name, save=False)
+                        sd_models.forge_model_reload();
+                    finally:
+                        main_entry.checkpoint_change(firstpass_checkpoint, save=False)
 
         return self.sample_hr_pass(samples, decoded_samples, seeds, subseeds, subseed_strength, prompts)
 
@@ -1555,7 +1550,7 @@ class StableDiffusionProcessingTxt2Img(StableDiffusionProcessing):
         steps = self.hr_second_pass_steps or self.steps
         total_steps = sampler_config.total_steps(steps) if sampler_config else steps
 
-        if self.cfg_scale == 1:
+        if self.hr_cfg == 1:
             self.hr_uc = None
             print('Skipping unconditional conditioning (HR pass) when CFG = 1. Negative Prompts are ignored.')
         else:
