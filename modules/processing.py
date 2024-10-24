@@ -812,6 +812,9 @@ def manage_model_and_prompt_cache(p: StableDiffusionProcessing):
 
 def process_images(p: StableDiffusionProcessing) -> Processed:
     """applies settings overrides (if any) before processing images, then restores settings as applicable."""
+    if p.scripts is not None:
+        p.scripts.before_process(p)
+        
     stored_opts = {k: opts.data[k] if k in opts.data else opts.get_default(k) for k in p.override_settings.keys() if k in opts.data}
 
     try:
@@ -824,10 +827,11 @@ def process_images(p: StableDiffusionProcessing) -> Processed:
         set_config(p.override_settings, is_api=True, run_callbacks=False, save_config=False)
 
         # load/reload model and manage prompt cache as needed
-        manage_model_and_prompt_cache(p)
-
-        if p.scripts is not None:
-            p.scripts.before_process(p)
+        if p.highresfix_quick == True:
+            # avoid model load here, as it could be redundant
+            pass
+        else:
+            manage_model_and_prompt_cache(p)
 
         # backwards compatibility, fix sampler and scheduler if invalid
         sd_samplers.fix_p_invalid_sampler_and_scheduler(p)
@@ -924,7 +928,7 @@ def process_images_inner(p: StableDiffusionProcessing) -> Processed:
             if state.interrupted or state.stopping_generation:
                 break
 
-            sd_models.reload_model_weights()  # model can be changed for example by refiner
+            sd_models.forge_model_reload()  # model can be changed for example by refiner, hiresfix fix
 
             p.sd_model.forge_objects = p.sd_model.forge_objects_original.shallow_copy()
             p.prompts = p.all_prompts[n * p.batch_size:(n + 1) * p.batch_size]
@@ -1177,6 +1181,7 @@ def old_hires_fix_first_pass_dimensions(width, height):
 @dataclass(repr=False)
 class StableDiffusionProcessingTxt2Img(StableDiffusionProcessing):
     enable_hr: bool = False
+    highresfix_quick: bool = False
     denoising_strength: float = 0.75
     firstphase_width: int = 0
     firstphase_height: int = 0
@@ -1186,6 +1191,7 @@ class StableDiffusionProcessingTxt2Img(StableDiffusionProcessing):
     hr_resize_x: int = 0
     hr_resize_y: int = 0
     hr_checkpoint_name: str = None
+    hr_additional_modules: list = field(default=None)
     hr_sampler_name: str = None
     hr_scheduler: str = None
     hr_prompt: str = ''
@@ -1274,6 +1280,15 @@ class StableDiffusionProcessingTxt2Img(StableDiffusionProcessing):
                     raise Exception(f'Could not find checkpoint with name {self.hr_checkpoint_name}')
 
                 self.extra_generation_params["Hires checkpoint"] = self.hr_checkpoint_info.short_title
+
+            if isinstance(self.hr_additional_modules, list):
+                if self.hr_additional_modules == []:
+                    self.extra_generation_params['Hires Module 1'] = 'Built-in'
+                elif 'Use same choices' in self.hr_additional_modules:
+                    self.extra_generation_params['Hires Module 1'] = 'Use same choices'
+                else:
+                    for i, m in enumerate(self.hr_additional_modules):
+                        self.extra_generation_params[f'Hires Module {i+1}'] = os.path.splitext(os.path.basename(m))[0]
 
             if self.hr_sampler_name is not None and self.hr_sampler_name != self.sampler_name:
                 self.extra_generation_params["Hires sampler"] = self.hr_sampler_name
@@ -1381,14 +1396,27 @@ class StableDiffusionProcessingTxt2Img(StableDiffusionProcessing):
                 decoded_samples = None
 
         with sd_models.SkipWritingToConfig():
+            fp_checkpoint = getattr(shared.opts, 'sd_model_checkpoint')
+            fp_additional_modules = getattr(shared.opts, 'forge_additional_modules')
+
+            reload = False
+            if 'Use same choices' not in self.hr_additional_modules:
+                if sorted(self.hr_additional_modules) != sorted(fp_additional_modules):
+                    main_entry.modules_change(self.hr_additional_modules, save=False, refresh=False)
+                    reload = True
+
             if self.hr_checkpoint_name and self.hr_checkpoint_name != 'Use same checkpoint':
-                firstpass_checkpoint = getattr(shared.opts, 'sd_model_checkpoint')
-                if firstpass_checkpoint != self.hr_checkpoint_name:
-                    try:
-                        main_entry.checkpoint_change(self.hr_checkpoint_name, save=False)
-                        sd_models.forge_model_reload();
-                    finally:
-                        main_entry.checkpoint_change(firstpass_checkpoint, save=False)
+                if self.hr_checkpoint_name != fp_checkpoint:
+                    main_entry.checkpoint_change(self.hr_checkpoint_name, save=False, refresh=False)
+                    reload = True
+            
+            if reload:
+                try:
+                    main_entry.refresh_model_loading_parameters()
+                    sd_models.forge_model_reload()
+                finally:
+                    main_entry.modules_change(fp_additional_modules, save=False, refresh=False)
+                    main_entry.checkpoint_change(fp_checkpoint, save=False)
 
         return self.sample_hr_pass(samples, decoded_samples, seeds, subseeds, subseed_strength, prompts)
 
@@ -1618,6 +1646,7 @@ class StableDiffusionProcessingImg2Img(StableDiffusionProcessing):
     force_task_id: str = None
 
     hr_distilled_cfg: float = 3.5       #   needed here for cached_params
+    highresfix_quick: bool = False
 
     image_mask: Any = field(default=None, init=False)
 
