@@ -313,13 +313,18 @@ def forge_loader(sd, additional_state_dicts=None):
     has_prediction_type = 'scheduler' in huggingface_components and hasattr(huggingface_components['scheduler'], 'config') and 'prediction_type' in huggingface_components['scheduler'].config
 
     if yaml_config is not None:
-        model_config_params = yaml_config.get('model', {}).get('params', {})
-        if "parameterization" in model_config_params:
-            if model_config_params["parameterization"] == "v":
-                yaml_config_prediction_type = 'v_prediction'
+        yaml_config_prediction_type: str = (
+                yaml_config.get('model', {}).get('params', {}).get('parameterization', '')
+            or  yaml_config.get('model', {}).get('params', {}).get('denoiser_config', {}).get('params', {}).get('scaling_config', {}).get('target', '')
+        )
+        if yaml_config_prediction_type == 'v' or yaml_config_prediction_type.endswith(".VScaling"):
+            yaml_config_prediction_type = 'v_prediction'
+        else:
+            # Use estimated prediction config if no suitable prediction type found
+            yaml_config_prediction_type = ''
 
     if has_prediction_type:
-        if yaml_config_prediction_type is not None:
+        if yaml_config_prediction_type:
             huggingface_components['scheduler'].config.prediction_type = yaml_config_prediction_type
         else:
             huggingface_components['scheduler'].config.prediction_type = prediction_types.get(estimated_config.model_type.name, huggingface_components['scheduler'].config.prediction_type)
