@@ -15,6 +15,7 @@ __pycache__
 /ESRGAN/*
 /SwinIR/*
 /repositories
+/.zluda
 /venv
 /tmp
 /output
