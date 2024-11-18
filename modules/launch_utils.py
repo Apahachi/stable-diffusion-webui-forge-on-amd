@@ -361,9 +361,23 @@ def requirements_met(requirements_file):
 
 
 def prepare_environment():
-    torch_index_url = os.environ.get('TORCH_INDEX_URL', "https://download.pytorch.org/whl/cu121")
-    torch_command = os.environ.get('TORCH_COMMAND', f"pip install torch==2.3.1 torchvision==0.18.1 --extra-index-url {torch_index_url}")
-    if args.use_ipex:
+    system = platform.system()
+    nvidia_driver_found = False
+    rocm_found = False
+    hip_found = False
+    backend = "cuda"
+   
+    if args.use_zluda:
+        print(' ZLUDA works , You are on an amazing Journey ,Engjoy it ')
+        backend = "cuda"
+        torch_index_url = os.environ.get(
+            "TORCH_INDEX_URL", "https://download.pytorch.org/whl/cu118"
+        )
+        torch_command = os.environ.get(
+            "TORCH_COMMAND",
+            f"pip install torch==2.3.1 torchvision --index-url {torch_index_url}",
+        )
+    elif args.use_ipex:
         if platform.system() == "Windows":
             # The "Nuullll/intel-extension-for-pytorch" wheels were built from IPEX source for Intel Arc GPU: https://github.com/intel/intel-extension-for-pytorch/tree/xpu-main
             # This is NOT an Intel official release so please use it at your own risk!!
@@ -383,6 +397,43 @@ def prepare_environment():
             # See https://intel.github.io/intel-extension-for-pytorch/index.html#installation for details.
             torch_index_url = os.environ.get('TORCH_INDEX_URL', "https://pytorch-extension.intel.com/release-whl/stable/xpu/us/")
             torch_command = os.environ.get('TORCH_COMMAND', f"pip install torch==2.0.0a0 intel-extension-for-pytorch==2.0.110+gitba7f6c1 --extra-index-url {torch_index_url}")
+    else:
+        nvidia_driver_found = shutil.which("nvidia-smi") is not None
+        rocm_found = shutil.which("rocminfo") is not None
+        hip_found = system == "Windows" and shutil.which("hipinfo") is not None
+        if nvidia_driver_found:
+            print("NVIDIA driver was found.")
+            backend = "cuda"
+            torch_index_url = os.environ.get(
+                "TORCH_INDEX_URL", "https://download.pytorch.org/whl/cu121"
+            )
+            torch_command = os.environ.get(
+                "TORCH_COMMAND",
+                f"pip install torch==2.2.0 torchvision==0.17.0 --extra-index-url {torch_index_url}",
+            )
+        elif system == "Windows" and hip_found: # ZLUDA
+            args.use_zluda = True
+            print("ROCm Toolkit was found.")
+            backend = "cuda"
+            torch_index_url = os.environ.get(
+                "TORCH_INDEX_URL", "https://download.pytorch.org/whl/cu118"
+            )
+            torch_command = os.environ.get(
+                "TORCH_COMMAND",
+                f"pip install torch==2.3.1 torchvision --index-url {torch_index_url}",
+            )
+        elif rocm_found:
+            print("ROCm Toolkit was found.")
+            backend = "rocm"
+            torch_index_url = os.environ.get(
+                "TORCH_INDEX_URL", "https://download.pytorch.org/whl/rocm6.0"
+            )
+            torch_command = os.environ.get(
+                "TORCH_COMMAND",
+                f"pip install torch==2.3.0 torchvision --index-url {torch_index_url}",
+            )
+    
+    
     requirements_file = os.environ.get('REQS_FILE', "requirements_versions.txt")
     requirements_file_for_npu = os.environ.get('REQS_FILE_FOR_NPU', "requirements_npu.txt")
 
@@ -402,8 +453,8 @@ def prepare_environment():
     # stable_diffusion_commit_hash = os.environ.get('STABLE_DIFFUSION_COMMIT_HASH', "cf1d67a6fd5ea1aa600c4df58e5b47da45f6bdbf")
     # stable_diffusion_xl_commit_hash = os.environ.get('STABLE_DIFFUSION_XL_COMMIT_HASH', "45c443b316737a4ab6e40413d7794a7f5657c19f")
     # k_diffusion_commit_hash = os.environ.get('K_DIFFUSION_COMMIT_HASH', "ab527a9a6d347f364e3d185ba6d714e22d80cb3c")
-    huggingface_guess_commit_hash = os.environ.get('HUGGINGFACE_GUESS_HASH', "70942022b6bcd17d941c1b4172804175758618e2")
-    google_blockly_commit_hash = os.environ.get('GOOGLE_BLOCKLY_COMMIT_HASH', "bf36e6fd3750a081f44209ba4f645adb598f7e37")
+    huggingface_guess_commit_hash = os.environ.get('HUGGINGFACE_GUESS_HASH', "84826248b49bb7ca754c73293299c4d4e23a548d")
+    google_blockly_commit_hash = os.environ.get('GOOGLE_BLOCKLY_COMMIT_HASH', "1e98997c7fedaf5106af9849b6f50ebe5c4408f1")
     blip_commit_hash = os.environ.get('BLIP_COMMIT_HASH', "48211a1594f1321b00f14c9f7a5b4813144b2fb9")
 
     try:
@@ -429,6 +480,28 @@ def prepare_environment():
     if args.reinstall_torch or not is_installed("torch") or not is_installed("torchvision"):
         run(f'"{python}" -m {torch_command}', "Installing torch and torchvision", "Couldn't install torch", live=True)
         startup_timer.record("install torch")
+
+    if args.use_zluda:
+        error = None
+        from modules import zluda_installer
+        try:
+            zluda_path = zluda_installer.get_path()
+            zluda_installer.install(zluda_path)
+            zluda_installer.make_copy(zluda_path)
+        except Exception as e:
+            error = e
+            print(f'Failed to install ZLUDA: {e}')
+        if error is None:
+            try:
+                zluda_installer.load(zluda_path)
+                torch_command = os.environ.get('TORCH_COMMAND', 'pip install torch==2.3.1 torchvision --index-url https://download.pytorch.org/whl/cu118')
+                print(f'Using ZLUDA in {zluda_path}')
+            except Exception as e:
+                error = e
+                print(f'Failed to load ZLUDA: {e}')
+        if error is not None:
+            print('Using CPU-only torch')
+            torch_command = os.environ.get('TORCH_COMMAND', 'pip install torch torchvision')
 
     if args.use_ipex:
         args.skip_torch_cuda_test = True
@@ -569,3 +642,35 @@ def dump_sysinfo():
         file.write(text)
 
     return filename
+
+def find_zluda():
+    zluda_path = os.environ.get('ZLUDA', None)
+    if zluda_path is None:
+        paths = os.environ.get('PATH', '').split(';')
+        for path in paths:
+            if os.path.exists(os.path.join(path, 'zluda_redirect.dll')):
+                zluda_path = path
+                break
+    return zluda_path
+
+
+def patch_zluda():
+    zluda_path = find_zluda()
+    if zluda_path is None:
+        print('Failed to automatically patch torch with ZLUDA. Could not find ZLUDA from PATH.')
+        return
+    python_dir = os.path.dirname(shutil.which('python'))
+    if shutil.which('conda') is None:
+        python_dir = os.path.dirname(python_dir)
+    venv_dir = os.environ.get('VENV_DIR', python_dir)
+    dlls_to_patch = {
+        'cublas.dll': 'cublas64_11.dll',
+        #'cudnn.dll': 'cudnn64_8.dll',
+        'cusparse.dll': 'cusparse64_11.dll',
+        'nvrtc.dll': 'nvrtc64_112_0.dll',
+    }
+    try:
+        for k, v in dlls_to_patch.items():
+            shutil.copyfile(os.path.join(zluda_path, k), os.path.join(venv_dir, 'Lib', 'site-packages', 'torch', 'lib', v))
+    except Exception as e:
+        print(f'ZLUDA: failed to automatically patch torch: {e}')

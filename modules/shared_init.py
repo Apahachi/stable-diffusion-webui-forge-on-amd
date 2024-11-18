@@ -4,7 +4,7 @@ import torch
 
 from modules import shared
 from modules.shared import cmd_opts
-
+from modules.zluda import initialize_zluda
 
 def initialize():
     """Initializes fields inside the shared module in a controlled manner.
@@ -43,3 +43,4 @@ def initialize():
     shared.mem_mon = memmon.MemUsageMonitor("MemMon", devices.device, shared.opts)
     shared.mem_mon.start()
 
+    initialize_zluda()
