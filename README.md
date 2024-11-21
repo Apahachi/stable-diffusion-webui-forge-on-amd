@@ -68,12 +68,23 @@ or you may try add extra
  Then apply the change in your code editor( eg VS code) ,where `git stash pop`listed.
 
 Close command prompt and run `webui-user.bat` again.
+## SD3.5
+by run :
+
+	git checkout sd35
+ 
+ click `webui-user.bat` to start program,if you want to Switch back to origin, by run :
+ 	
+  	git checkout main
+
+Tested work on limited sd3.5 large fp 8 models with Euler, SGM_Uniform . eg.[SD3.5_fp8_SS_ALL.marduk191]( https://hf-mirror.com/marduk191/SD3.5_fp8_SS_ALL.marduk191/tree/main),
+The speed is almost same as flux.
 
 Note：For some old cards ,eg rx580 (gfx803),need to downgrad to pytorch to 2.2.1 . by run 
 ```
 python -m venv venv
  .\venv\Scripts\activate
-pip install torch==2.3.1 torchvision --index-url https://download.pytorch.org/whl/cu118
+pip install torch==2.2.1 torchvision --index-url https://download.pytorch.org/whl/cu118
 
 ```
 then click the `webui-user.bat` to start . 
