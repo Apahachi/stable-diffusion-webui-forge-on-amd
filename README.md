@@ -79,7 +79,11 @@ by run :
 
 Tested work on limited sd3.5 large fp 8 models with Euler, SGM_Uniform . eg.[SD3.5_fp8_SS_ALL.marduk191]( https://hf-mirror.com/marduk191/SD3.5_fp8_SS_ALL.marduk191/tree/main),
 The speed is almost same as flux.
+If had vram or ram overload in recent update. run
 
+	git checkout 2a855b3d9554fa0a2ca7bd59820890063bd9bde9
+
+It will switch to previous proper commit ,make sure to swithc back to `main` before update.
 Note：For some old cards ,eg rx580 (gfx803),need to downgrad to pytorch to 2.2.1 . by run 
 ```
 python -m venv venv
@@ -89,11 +93,11 @@ pip install torch==2.2.1 torchvision --index-url https://download.pytorch.org/wh
 ```
 then click the `webui-user.bat` to start . 
 
-> [!IMPORTANT]
+> [!TIP]
 > Flux Use on Zluda ，tested work on `Flux-dev-fp8.safetensors`, and `t5xxl_fp8_e4m3fn.safetensors` combination ,
 `Flux1-dev-Q4_K_S.gguf`，`flux1-dev-Q6_K.gguf `works and others like `Q2,Q3,Q5` also should works except maybe slower than no-quantized files ,`.safetensors`.
->  A list of quantized models in GGUF file available at [here](https://huggingface.co/city96/FLUX.1-dev-gguf/tree/main) .
->  A list of quantized T5 v1.1 XXL encoder model in GGUF file available at [here](https://huggingface.co/city96/t5-v1_1-xxl-encoder-gguf/tree/main).
+>  A list of quantized models in GGUF file available at [FLUX.1-dev-gguf](https://huggingface.co/city96/FLUX.1-dev-gguf/tree/main) .
+>  A list of quantized` T5 v1.1 XXL` encoder model in `GGUF` file available at [t5-v1_1-xxl-encoder-gguf](https://huggingface.co/city96/t5-v1_1-xxl-encoder-gguf/tree/main).
 >  Flux loras use need set `Automatic (fp16 LoRA)` in `Diffusion in Low Bits`. Test works for many loras now ,however there are some lora still failed to work.）
 
 if there is not enough vram , you may increase your virtual memory or use quantized models like Q4 or less .
