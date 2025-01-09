@@ -5,6 +5,7 @@
 
 import math
 import torch
+import numpy as np
 
 from torch import nn
 from einops import rearrange, repeat
@@ -368,6 +369,14 @@ class IntegratedFluxTransformer2DModel(nn.Module):
         )
 
         self.final_layer = LastLayer(self.hidden_size, 1, self.out_channels)
+        
+                # TeaCache 
+        self.enable_teacache = True
+        self.cnt = 0
+        self.rel_l1_thresh = 0.4
+        self.accumulated_rel_l1_distance = 0
+        self.previous_modulated_input = None
+        self.previous_residual = None
 
     def inner_forward(self, img, img_ids, txt, txt_ids, timesteps, y, guidance=None):
         if img.ndim != 3 or txt.ndim != 3:
@@ -385,19 +394,55 @@ class IntegratedFluxTransformer2DModel(nn.Module):
         del txt_ids, img_ids
         pe = self.pe_embedder(ids)
         del ids
-        for block in self.double_blocks:
-            img, txt = block(img=img, txt=txt, vec=vec, pe=pe)
-        img = torch.cat((txt, img), 1)
-        for block in self.single_blocks:
-            img = block(img, vec=vec, pe=pe)
-        del pe
-        img = img[:, txt.shape[1]:, ...]
-        del txt
+
+        # TeaCache 
+        if self.enable_teacache:
+            modulated_inp = img.clone()
+            if self.cnt == 0 or self.cnt == self.steps - 1:
+                should_calc = True
+                self.accumulated_rel_l1_distance = 0
+            else:
+                coefficients = [4.98651651e+02, -2.83781631e+02, 5.58554382e+01, -3.82021401e+00, 2.64230861e-01]
+                rescale_func = np.poly1d(coefficients)
+                self.accumulated_rel_l1_distance += rescale_func(((modulated_inp - self.previous_modulated_input).abs().mean() / self.previous_modulated_input.abs().mean()).cpu().item())
+                if self.accumulated_rel_l1_distance < self.rel_l1_thresh:
+                    should_calc = False
+                else:
+                    should_calc = True
+                    self.accumulated_rel_l1_distance = 0
+            self.previous_modulated_input = modulated_inp
+            self.cnt += 1
+            if self.cnt == self.steps:
+                self.cnt = 0
+
+            if not should_calc:
+                img += self.previous_residual
+            else:
+                ori_img = img.clone()
+                for block in self.double_blocks:
+                    img, txt = block(img=img, txt=txt, vec=vec, pe=pe)
+                img = torch.cat((txt, img), 1)
+                for block in self.single_blocks:
+                    img = block(img, vec=vec, pe=pe)
+                img = img[:, txt.shape[1]:, ...]
+                self.previous_residual = img - ori_img
+        else:
+            for block in self.double_blocks:
+                img, txt = block(img=img, txt=txt, vec=vec, pe=pe)
+            img = torch.cat((txt, img), 1)
+            for block in self.single_blocks:
+                img = block(img, vec=vec, pe=pe)
+            img = img[:, txt.shape[1]:, ...]
+
         img = self.final_layer(img, vec)
         del vec
         return img
 
-    def forward(self, x, timestep, context, y, guidance=None, **kwargs):
+    def forward(self, x, timestep, context, y, guidance=None, enable_teacache=True, rel_l1_thresh=0.4, steps=25, **kwargs):
+        self.enable_teacache = enable_teacache
+        self.rel_l1_thresh = rel_l1_thresh
+        self.steps = steps
+
         bs, c, h, w = x.shape
         input_device = x.device
         input_dtype = x.dtype

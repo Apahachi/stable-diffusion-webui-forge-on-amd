@@ -368,7 +368,7 @@ def prepare_environment():
     backend = "cuda"
    
     if args.use_zluda:
-        print(' ZLUDA works , You are on an amazing Journey ,Engjoy it ')
+        print(' \033[32mZLUDA works , You are on an amazing Journey ,Engjoy it\033[0m')
         backend = "cuda"
         torch_index_url = os.environ.get(
             "TORCH_INDEX_URL", "https://download.pytorch.org/whl/cu118"

@@ -5,7 +5,7 @@ import zipfile
 import platform
 import urllib.request
 from typing import Tuple
-
+#from modules import rocm
 
 class HIPSDKVersion:
     major: int
@@ -52,7 +52,9 @@ class HIPSDK:
         self.path = os.environ.get('HIP_PATH', default_version or os.path.join(rocm_path, str(default_version)))
         if self.path is None:
             raise RuntimeError('Could not find AMD HIP SDK, please install it from https://www.amd.com/en/developer/resources/rocm-hub/hip-sdk.html')
-
+        
+        #if os.environ.get("HIP_PATH_62", None) is not None:
+        #    self.version = "6.2"
         if os.environ.get("HIP_PATH_61", None) is not None:
             self.version = "6.1"
         elif os.environ.get("HIP_PATH_57", None) is not None:
@@ -82,8 +84,10 @@ def install(zluda_path: os.PathLike) -> None:
         return
 
     default_hash = None
-    if HIPSDK.version == "6.1":
-        default_hash = 'd7714d84c0c13bbf816eaaac32693e4e75e58a87'
+    if HIPSDK.version == "6.2":
+        default_hash = 'new_hash_for_6_2'
+    elif HIPSDK.version == "6.1":
+        default_hash = 'c0804ca624963aab420cb418412b1c7fbae3454b'
     elif HIPSDK.version == "5.7":
         default_hash = '11cc5844514f93161e0e74387f04e2c537705a82'
     urllib.request.urlretrieve(f'https://github.com/lshqqytiger/ZLUDA/releases/download/rel.{os.environ.get("ZLUDA_HASH", default_hash)}/ZLUDA-windows-amd64.zip', '_zluda')

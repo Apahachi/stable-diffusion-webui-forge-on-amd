@@ -10,7 +10,7 @@ def has_xpu() -> bool:
 def has_mps() -> bool:
     return memory_management.mps_mode()
 
-
+        
 def cuda_no_autocast(device_id=None) -> bool:
     return False
 
