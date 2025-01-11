@@ -84,6 +84,22 @@ If had vram or ram overload in recent update. run
 	git checkout 2a855b3d9554fa0a2ca7bd59820890063bd9bde9
 
 It will switch to previous proper commit ,make sure to swithc back to `main` before update.
+
+## expertimental teacatch with a 2x speed in flux . (only one draws back , can only works either 512x768 or 1024x1024, if you want change size ,need relaunch the system ,ie, click `webui-user.bat`  )
+
+by run :
+
+	git checkout teacache
+
+
+
+```
+
+def forward(self, x, timestep, context, y, guidance=None, enable_teacache=True, rel_l1_thresh=0.8, steps=25, **kwargs):
+
+```
+Default at 0.8 for 2.25x speedup,if you want to change the speed by mannuly change the code in backend/nn/flux.py line442  ,rel_l1_thresh=0.8 , 0.6 # 0.25 for 1.5x speedup, 0.4 for 1.8x speedup, 0.6 for 2.0x speedup, 0.8 for 2.25x speedup
+
 Note：For some old cards ,eg rx580 (gfx803),need to downgrad to pytorch to 2.2.1 . by run 
 ```
 python -m venv venv
