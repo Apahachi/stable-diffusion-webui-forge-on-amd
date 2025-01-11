@@ -84,9 +84,9 @@ def install(zluda_path: os.PathLike) -> None:
         return
 
     default_hash = None
-    if HIPSDK.version == "6.2":
-        default_hash = 'new_hash_for_6_2'
-    elif HIPSDK.version == "6.1":
+    #if HIPSDK.version == "6.2":
+    #    default_hash = 'new_hash_for_6_2'
+    if HIPSDK.version == "6.1":
         default_hash = 'c0804ca624963aab420cb418412b1c7fbae3454b'
     elif HIPSDK.version == "5.7":
         default_hash = '11cc5844514f93161e0e74387f04e2c537705a82'
