@@ -5,7 +5,6 @@
 
 import math
 import torch
-import numpy as np
 
 from torch import nn
 from einops import rearrange, repeat
@@ -323,6 +322,7 @@ class LastLayer(nn.Module):
         x = self.linear(x)
         return x
 
+
 class IntegratedFluxTransformer2DModel(nn.Module):
     def __init__(self, in_channels: int, vec_in_dim: int, context_in_dim: int, hidden_size: int, mlp_ratio: float, num_heads: int, depth: int, depth_single_blocks: int, axes_dim: list[int], theta: int, qkv_bias: bool, guidance_embed: bool):
         super().__init__()
@@ -338,35 +338,40 @@ class IntegratedFluxTransformer2DModel(nn.Module):
         if sum(axes_dim) != pe_dim:
             raise ValueError(f"Got {axes_dim} but expected positional dim {pe_dim}")
 
+        self.hidden_size = hidden_size
+        self.num_heads = num_heads
+
         self.pe_embedder = EmbedND(dim=pe_dim, theta=theta, axes_dim=axes_dim)
-        self.img_in = nn.Linear(self.in_channels, hidden_size, bias=True)
-        self.time_in = MLPEmbedder(in_dim=256, hidden_dim=hidden_size)
-        self.vector_in = MLPEmbedder(vec_in_dim, hidden_size)
-        self.guidance_in = MLPEmbedder(in_dim=256, hidden_dim=hidden_size) if guidance_embed else nn.Identity()
-        self.txt_in = nn.Linear(context_in_dim, hidden_size)
+        self.img_in = nn.Linear(self.in_channels, self.hidden_size, bias=True)
+        self.time_in = MLPEmbedder(in_dim=256, hidden_dim=self.hidden_size)
+        self.vector_in = MLPEmbedder(vec_in_dim, self.hidden_size)
+        self.guidance_in = MLPEmbedder(in_dim=256, hidden_dim=self.hidden_size) if guidance_embed else nn.Identity()
+        self.txt_in = nn.Linear(context_in_dim, self.hidden_size)
 
-        self.double_blocks = nn.ModuleList([DoubleStreamBlock(hidden_size, num_heads, mlp_ratio, qkv_bias) for _ in range(depth)])
-        self.single_blocks = nn.ModuleList([SingleStreamBlock(hidden_size, num_heads, mlp_ratio) for _ in range(depth_single_blocks)])
-        self.final_layer = LastLayer(hidden_size, 1, self.out_channels)
+        self.double_blocks = nn.ModuleList(
+            [
+                DoubleStreamBlock(
+                    self.hidden_size,
+                    self.num_heads,
+                    mlp_ratio=mlp_ratio,
+                    qkv_bias=qkv_bias,
+                )
+                for _ in range(depth)
+            ]
+        )
 
-        # TeaCache 
-        self.enable_teacache = True
-        self.rel_l1_thresh = 0.4
-        self.steps = 25
-        self.cnt = 0
-        self.accumulated_rel_l1_distance = 0
-        self.previous_modulated_input = None
-        self.previous_residual = None
+        self.single_blocks = nn.ModuleList(
+            [
+                SingleStreamBlock(self.hidden_size, self.num_heads, mlp_ratio=mlp_ratio)
+                for _ in range(depth_single_blocks)
+            ]
+        )
 
-    #def set_teacache_params(self, enable_teacache, rel_l1_thresh, steps):
-    #    self.enable_teacache = enable_teacache
-    #    self.rel_l1_thresh = rel_l1_thresh
-    #    self.steps = steps
-    
+        self.final_layer = LastLayer(self.hidden_size, 1, self.out_channels)
+
     def inner_forward(self, img, img_ids, txt, txt_ids, timesteps, y, guidance=None):
         if img.ndim != 3 or txt.ndim != 3:
             raise ValueError("Input img and txt tensors must have 3 dimensions.")
-        
         img = self.img_in(img)
         vec = self.time_in(timestep_embedding(timesteps, 256).to(img.dtype))
         if self.guidance_embed:
@@ -380,70 +385,19 @@ class IntegratedFluxTransformer2DModel(nn.Module):
         del txt_ids, img_ids
         pe = self.pe_embedder(ids)
         del ids
-
-        # TeaCache 
-        if self.enable_teacache:
-            modulated_inp = img.clone()
-            if self.cnt == 0 or self.cnt == self.steps - 1:
-                should_calc = True
-                self.accumulated_rel_l1_distance = 0
-            else:
-                if self.previous_modulated_input is None:
-                    self.previous_modulated_input = modulated_inp.clone()
-                else:
-                    # keep modulated_inp and previous_modulated_input size same
-                    if modulated_inp.shape != self.previous_modulated_input.shape:
-                        self.previous_modulated_input = self.previous_modulated_input.view(modulated_inp.shape)
-                
-                # avoice devided by zero
-                previous_mean = self.previous_modulated_input.abs().mean()
-                if previous_mean.item() == 0:
-                    self.accumulated_rel_l1_distance = 0
-                    should_calc = True
-                else:
-                    coefficients = [4.98651651e+02, -2.83781631e+02, 5.58554382e+01, -3.82021401e+00, 2.64230861e-01]
-                    rescale_func = np.poly1d(coefficients)
-                    self.accumulated_rel_l1_distance += rescale_func(
-                        ((modulated_inp - self.previous_modulated_input).abs().mean() / previous_mean).cpu().item()
-                    )
-                    if self.accumulated_rel_l1_distance < self.rel_l1_thresh:
-                        should_calc = False
-                    else:
-                        should_calc = True
-                        self.accumulated_rel_l1_distance = 0
-            self.previous_modulated_input = modulated_inp
-            self.cnt += 1
-            if self.cnt == self.steps:
-                self.cnt = 0
-
-            if not should_calc:
-                img += self.previous_residual
-            else:
-                ori_img = img.clone()
-                for block in self.double_blocks:
-                    img, txt = block(img=img, txt=txt, vec=vec, pe=pe)
-                img = torch.cat((txt, img), 1)
-                for block in self.single_blocks:
-                    img = block(img, vec=vec, pe=pe)
-                img = img[:, txt.shape[1]:, ...]
-                self.previous_residual = img - ori_img
-        else:
-            for block in self.double_blocks:
-                img, txt = block(img=img, txt=txt, vec=vec, pe=pe)
-            img = torch.cat((txt, img), 1)
-            for block in self.single_blocks:
-                img = block(img, vec=vec, pe=pe)
-            img = img[:, txt.shape[1]:, ...]
-
+        for block in self.double_blocks:
+            img, txt = block(img=img, txt=txt, vec=vec, pe=pe)
+        img = torch.cat((txt, img), 1)
+        for block in self.single_blocks:
+            img = block(img, vec=vec, pe=pe)
+        del pe
+        img = img[:, txt.shape[1]:, ...]
+        del txt
         img = self.final_layer(img, vec)
         del vec
         return img
 
-    def forward(self, x, timestep, context, y, guidance=None, enable_teacache=True, rel_l1_thresh=0.8, steps=25, **kwargs):
-        self.enable_teacache = enable_teacache
-        self.rel_l1_thresh = rel_l1_thresh
-        self.steps = steps
-
+    def forward(self, x, timestep, context, y, guidance=None, **kwargs):
         bs, c, h, w = x.shape
         input_device = x.device
         input_dtype = x.dtype
