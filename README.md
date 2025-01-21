@@ -85,10 +85,12 @@ If had vram or ram overload in recent update. run
 
 It will switch to previous proper commit ,make sure to swithc back to `main` before update.
 
-## expertimental teacatch with a 2x speed in flux . 
-(only one draws back , can only works either 512x768 or 1024x1024, if you want change size ,need relaunch the system ,ie, click `webui-user.bat`  )
+## expertimental teacache with a 2x speed in flux .
+( [sd-forge-teacache extension](https://github.com/likelovewant/sd-forge-teacache) and/or[DenOfEquity/sd-forge-blockcache](https://github.com/DenOfEquity/sd-forge-blockcache))
 
-by run :
+(recommend use extension , the git commit way below has drawbacks , can only works either 512x768 or 1024x1024, if you want change size ,need relaunch the system ,ie, click `webui-user.bat`  )
+
+or by run :
 
 	git checkout f002f43d709f82bc320464cd4773d6e690439c19
 
