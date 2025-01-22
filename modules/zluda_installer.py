@@ -82,15 +82,19 @@ def get_path() -> str:
 def install(zluda_path: os.PathLike) -> None:
     if os.path.exists(zluda_path):
         return
+#Fixed because Zluda changed naming structure so this always gave a 404 if you were on the wrong version of HIP
+    #also likelovewant made it so it was impossible to notify of the change needed forcing me to fork this into it's own repo just to make this update known...
+    #bruh...
 
     default_hash = None
-    #if HIPSDK.version == "6.2":
-    #    default_hash = 'new_hash_for_6_2'
+    if HIPSDK.version == "6.2":
+        default_hash = 'c4994b3093e02231339d22e12be08418b2af781f'
+        urllib.request.urlretrieve(f'https://github.com/lshqqytiger/ZLUDA/releases/download/rel.{os.environ.get("ZLUDA_HASH", default_hash)}/ZLUDA-windows-rocm6-amd64.zip', '_zluda')
     if HIPSDK.version == "6.1":
         default_hash = 'c0804ca624963aab420cb418412b1c7fbae3454b'
     elif HIPSDK.version == "5.7":
         default_hash = '11cc5844514f93161e0e74387f04e2c537705a82'
-    urllib.request.urlretrieve(f'https://github.com/lshqqytiger/ZLUDA/releases/download/rel.{os.environ.get("ZLUDA_HASH", default_hash)}/ZLUDA-windows-amd64.zip', '_zluda')
+        urllib.request.urlretrieve(f'https://github.com/lshqqytiger/ZLUDA/releases/download/rel.{os.environ.get("ZLUDA_HASH", default_hash)}/ZLUDA-windows-amd64.zip', '_zluda')
     with zipfile.ZipFile('_zluda', 'r') as archive:
         infos = archive.infolist()
         for info in infos:
