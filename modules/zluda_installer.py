@@ -1,96 +1,58 @@
 import os
+import sys
+import site
 import ctypes
 import shutil
 import zipfile
-import platform
 import urllib.request
-from typing import Tuple
-#from modules import rocm
-
-class HIPSDKVersion:
-    major: int
-    minor: int
-
-    def __init__(self, version: str):
-        self.major, self.minor = [int(v) for v in version.strip().split(".")]
-
-    def __gt__(self, other):
-        return self.major * 10 + other.minor > other.major * 10 + other.minor
-
-    def __str__(self):
-        return f"{self.major}.{self.minor}"
-
-
-class HIPSDK:
-    is_installed = False
-
-    version: str
-    path: str
-    targets: Tuple[str]
-
-    def __init__(self):
-        if platform.system() != 'Windows':
-            raise RuntimeError('ZLUDA cannot be automatically installed on Linux. Please select --use-cuda for ZLUDA or --use-rocm for ROCm.')
-
-        program_files = os.environ.get('ProgramFiles', r'C:\Program Files')
-        rocm_path = rf'{program_files}\AMD\ROCm'
-        default_version = None
-        if os.path.exists(rocm_path):
-            versions = os.listdir(rocm_path)
-            for s in versions:
-                version = None
-                try:
-                    version = HIPSDKVersion(s)
-                except Exception:
-                    continue
-                if default_version is None:
-                    default_version = version
-                    continue
-                if version > default_version:
-                    default_version = version
-
-        self.path = os.environ.get('HIP_PATH', default_version or os.path.join(rocm_path, str(default_version)))
-        if self.path is None:
-            raise RuntimeError('Could not find AMD HIP SDK, please install it from https://www.amd.com/en/developer/resources/rocm-hub/hip-sdk.html')
-        
-        #if os.environ.get("HIP_PATH_62", None) is not None:
-        #    self.version = "6.2"
-        if os.environ.get("HIP_PATH_61", None) is not None:
-            self.version = "6.1"
-        elif os.environ.get("HIP_PATH_57", None) is not None:
-            self.version = "5.7"
-        else:
-            self.version = os.path.basename(self.path) or os.path.basename(os.path.dirname(self.path))
-
-        self.targets = ['rocblas.dll', 'rocsolver.dll', f'hiprtc{"".join([v.zfill(2) for v in self.version.split(".")])}.dll']
-HIPSDK = HIPSDK()
-HIPSDK.is_installed = True
+from typing import Optional, Union
+from modules import rocm
 
 
 DLL_MAPPING = {
     'cublas.dll': 'cublas64_11.dll',
     'cusparse.dll': 'cusparse64_11.dll',
+    'cufft.dll': 'cufft64_10.dll',
+    'cufftw.dll': 'cufftw64_10.dll',
     'nvrtc.dll': 'nvrtc64_112_0.dll',
 }
+HIPSDK_TARGETS = ['rocblas.dll', 'rocsolver.dll', 'hipfft.dll']
 ZLUDA_TARGETS = ('nvcuda.dll', 'nvml.dll',)
+experimental_hipBLASLt_support: bool = False
+default_agent: Union[rocm.Agent, None] = None
 
 
 def get_path() -> str:
     return os.path.abspath(os.environ.get('ZLUDA', '.zluda'))
 
 
+def set_default_agent(agent: rocm.Agent):
+    global default_agent # pylint: disable=global-statement
+    default_agent = agent
+
+
 def install(zluda_path: os.PathLike) -> None:
     if os.path.exists(zluda_path):
+        __initialize(zluda_path)
         return
-
+    
+    platform = "windows"
     default_hash = None
-    #if HIPSDK.version == "6.2":
-    #    default_hash = 'new_hash_for_6_2'
-    if HIPSDK.version == "6.1":
-        default_hash = 'c0804ca624963aab420cb418412b1c7fbae3454b'
+    zluda_url = None
+    
+    if HIPSDK.version == "6.2":
+        default_hash = 'c4994b3093e02231339d22e12be08418b2af781f'
+        zluda_url = f'https://github.com/lshqqytiger/ZLUDA/releases/download/rel.{os.environ.get("ZLUDA_HASH", default_hash)}/ZLUDA-windows-rocm6-amd64.zip'
+    elif HIPSDK.version == "6.1":
+        default_hash = 'c4994b3093e02231339d22e12be08418b2af781f'
+        zluda_url = f'https://github.com/lshqqytiger/ZLUDA/releases/download/rel.{os.environ.get("ZLUDA_HASH", default_hash)}/ZLUDA-windows-rocm6-amd64.zip'
     elif HIPSDK.version == "5.7":
-        default_hash = '11cc5844514f93161e0e74387f04e2c537705a82'
-    urllib.request.urlretrieve(f'https://github.com/lshqqytiger/ZLUDA/releases/download/rel.{os.environ.get("ZLUDA_HASH", default_hash)}/ZLUDA-windows-amd64.zip', '_zluda')
+        default_hash = 'c4994b3093e02231339d22e12be08418b2af781f'
+        zluda_url = f'https://github.com/lshqqytiger/ZLUDA/releases/download/rel.{os.environ.get("ZLUDA_HASH", default_hash)}/ZLUDA-windows-rocm5-amd64.zip'
+
+    if zluda_url:
+        urllib.request.urlretrieve(zluda_url, '_zluda')
+
     with zipfile.ZipFile('_zluda', 'r') as archive:
         infos = archive.infolist()
         for info in infos:
@@ -98,7 +60,7 @@ def install(zluda_path: os.PathLike) -> None:
                 info.filename = os.path.basename(info.filename)
                 archive.extract(info, '.zluda')
     os.remove('_zluda')
-
+    __initialize(zluda_path)
 
 def uninstall() -> None:
     if os.path.exists('.zluda'):
@@ -106,6 +68,8 @@ def uninstall() -> None:
 
 
 def make_copy(zluda_path: os.PathLike) -> None:
+    __initialize(zluda_path)
+    
     for k, v in DLL_MAPPING.items():
         if not os.path.exists(os.path.join(zluda_path, v)):
             try:
@@ -115,9 +79,45 @@ def make_copy(zluda_path: os.PathLike) -> None:
 
 
 def load(zluda_path: os.PathLike) -> None:
-    for v in HIPSDK.targets:
-        ctypes.windll.LoadLibrary(os.path.join(HIPSDK.path, 'bin', v))
+    os.environ["ZLUDA_COMGR_LOG_LEVEL"] = "1"
+    os.environ["ZLUDA_NVRTC_LIB"] = os.path.join([v for v in site.getsitepackages() if v.endswith("site-packages")][0], "torch", "lib", "nvrtc64_112_0.dll")
+    
+    for v in HIPSDK_TARGETS:
+        ctypes.windll.LoadLibrary(os.path.join(rocm.path, 'bin', v))
     for v in ZLUDA_TARGETS:
         ctypes.windll.LoadLibrary(os.path.join(zluda_path, v))
     for v in DLL_MAPPING.values():
         ctypes.windll.LoadLibrary(os.path.join(zluda_path, v))
+
+    def conceal():
+        import torch # pylint: disable=unused-import
+        platform = sys.platform
+        sys.platform = ""
+        from torch.utils import cpp_extension
+        sys.platform = platform
+        cpp_extension.IS_WINDOWS = platform == "win32"
+        cpp_extension.IS_MACOS = False
+        cpp_extension.IS_LINUX = platform.startswith('linux')
+        def _join_rocm_home(*paths) -> str:
+            return os.path.join(cpp_extension.ROCM_HOME, *paths)
+        cpp_extension._join_rocm_home = _join_rocm_home # pylint: disable=protected-access
+    rocm.conceal = conceal
+
+
+def get_default_torch_version(agent: Optional[rocm.Agent]) -> str:
+    if agent is not None:
+        if agent.arch in (rocm.MicroArchitecture.RDNA, rocm.MicroArchitecture.CDNA,):
+            return "2.4.1" if experimental_hipBLASLt_support else "2.3.1"
+        elif agent.arch == rocm.MicroArchitecture.GCN:
+            return "2.2.1"
+    return "2.4.1" if experimental_hipBLASLt_support else "2.3.1"
+
+def __initialize(zluda_path: os.PathLike):
+    global experimental_hipBLASLt_support # pylint: disable=global-statement
+    experimental_hipBLASLt_support = os.path.exists(os.path.join(zluda_path, 'cublasLt.dll')) 
+    
+    if experimental_hipBLASLt_support:
+        HIPSDK_TARGETS.append('hipblaslt.dll')
+        DLL_MAPPING['cublasLt.dll'] = 'cublasLt64_11.dll'
+    else:
+        HIPSDK_TARGETS.append(f'hiprtc{"".join([v.zfill(2) for v in rocm.version.split(".")])}.dll')
