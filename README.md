@@ -13,9 +13,9 @@ If you want learn what changes between them . I only touch files `cmd_args.py`,`
 **Update**
 
 lshqqytiger has started a new fork of Forge, available at
-[https://github.com/lshqqytiger/stable-diffusion-webui-amdgpu-forge](https://github.com/lshqqytiger/stable-diffusion-webui-amdgpu-forge). This fork provides better support and is recommended to use.
+[https://github.com/lshqqytiger/stable-diffusion-webui-amdgpu-forge](https://github.com/lshqqytiger/stable-diffusion-webui-amdgpu-forge). This fork provides better support and advance function and is recommended to use.
 
-Initially, the purpose of creating a fork was to make Forge compatible with AMD before lshqqytiger's new fork. and the code from Lee .Now that Lee's fork is available, it is highly recommended to use his version for both HIP SDK 5.7 and 6.1.2.
+Initially, the purpose of start this fork share shqqytiger'zluda approach to Forge on AMD. and all those code from Lee .Now that Lee's fork is available, it is highly recommended to use his version.This fork is keeped in order to tweak around something new without interupt local `amdgpu-forge`.
 
 
 ## 1, Installing ZLUDA for AMD GPUs in Windows.
@@ -34,12 +34,12 @@ Download [ HIP SDK 5.7/6.1.2](https://www.amd.com/en/developer/resources/rocm-hu
 
 
 ## Add folders to PATH
-Add the HIP PATH 5.7/bin or 6.1/bin folder* and %HIP_PATH%bin to your [PATH.]
+Add the HIP PATH 5.7/bin or 6.1/bin or 6.2/bin folder* and %HIP_PATH%bin to your [PATH.]
 
 Skip zluda steps （ merge lee’s new zluda files ，it fully automatic now）
 Download from[ here](https://github.com/lshqqytiger/ZLUDA/releases/)
 Add the ZLUDA folder* and %HIP_PATH%bin to your [PATH.](https://github.com/brknsoul/ROCmLibs/wiki/Adding-folders-to-PATH)
-(note, you don't need to rename zluda files cublas.dll to cublas64_11.dll ,cusparse to cusparse64_11.dll and replace the one in vevn folder like other tutorial because the zluda had already detecd in patch in script)
+(note, you don't need to rename zluda files `cublas.dll` to `cublas64_11.dll` ,cusparse to `cusparse64_11.dll` and replace the one in vevn folder like other tutorial because the zluda had already detecd in patch in script)
 
 ## 2, Install ;
 
@@ -85,26 +85,28 @@ If had vram or ram overload in recent update. run
 
 It will switch to previous proper commit ,make sure to swithc back to `main` before update.
 
-## expertimental teacatch with a 2x speed in flux . (only one draws back , can only works either 512x768 or 1024x1024, if you want change size ,need relaunch the system ,ie, click `webui-user.bat`  )
-
-by run :
-
-	git checkout teacache
+## expertimental teacache with a 2x speed in flux .
+( [sd-forge-teacache extension](https://github.com/likelovewant/sd-forge-teacache) and/or[DenOfEquity/sd-forge-blockcache](https://github.com/DenOfEquity/sd-forge-blockcache))
 
 
-
-```
-
-def forward(self, x, timestep, context, y, guidance=None, enable_teacache=True, rel_l1_thresh=0.8, steps=25, **kwargs):
-
-```
-Default at 0.8 for 2.25x speedup,if you want to change the speed by mannuly change the code in backend/nn/flux.py line442  ,rel_l1_thresh=0.8 , 0.6 # 0.25 for 1.5x speedup, 0.4 for 1.8x speedup, 0.6 for 2.0x speedup, 0.8 for 2.25x speedup
+Default at `0.4 for 1.8x speedup`,if you want to change the speed by mannuly change  ,rel_l1_thresh=0.8 , 0.6 # `0.25 for 1.5x` speedup, `0.4 for 1.8x` speedup, `0.6 for 2.0x` speedup, `0.8 for 2.25x` speedup
 
 Note：For some old cards ,eg rx580 (gfx803),need to downgrad to pytorch to 2.2.1 . by run 
 ```
 python -m venv venv
  .\venv\Scripts\activate
 pip install torch==2.2.1 torchvision --index-url https://download.pytorch.org/whl/cu118
+
+```
+if want do update default pytorch to torch 2.4 or 2.5 ...
+
+by build from ROCm official's hipblaslt windows branch or download hipblaslt from [hipblaslt-rocmlibs](https://github.com/likelovewant/ROCmLibs-for-gfx1103-AMD780M-APU/releases/download/v0.6.2.4/hipblaslt-rocmlibs-for-gfx1100-gfx1101-gfx1102-gfx1103-gfx1150-for.hip6.2.7z), currently only support gfx110x series on windows .
+ Place `hipblaslt.dll `into `C:\Program Files\AMD\ROCm\6.2\bin`( `C:\Program Files\AMD\ROCm\6.2\bin`),creat a `hipblaslt` directory replace library within` hipblaslt\library` , download the [ZLUDA-nightly-windows-rocm6-amd64.zip](https://github.com/lshqqytiger/ZLUDA/releases/download/rel.c4994b3093e02231339d22e12be08418b2af781f/ZLUDA-nightly-windows-rocm6-amd64.zip) mannuly ,unzip and place in the .zluda directory in default AMD FORGE directory .doing nothing .
+
+ ```
+python -m venv venv
+ .\venv\Scripts\activate
+pip install torch==2.4.1 torchvision --index-url https://download.pytorch.org/whl/cu118
 
 ```
 then click the `webui-user.bat` to start . 
@@ -117,8 +119,8 @@ then click the `webui-user.bat` to start .
 >  Flux loras use need set `Automatic (fp16 LoRA)` in `Diffusion in Low Bits`. Test works for many loras now ,however there are some lora still failed to work.）
 
 if there is not enough vram , you may increase your virtual memory or use quantized models like Q4 or less .
-### if you need build roclabs ,please get support by this [guide](https://github.com/likelovewant/ROCmLibs-for-gfx1103-AMD780M-APU/wiki) .
 
+Below content from  [ lllyasviel's upstream main  ]( https://github.com/lllyasviel/stable-diffusion-webui-forge )
 
 Forge is currently based on SD-WebUI 1.10.1 at [this commit](https://github.com/AUTOMATIC1111/stable-diffusion-webui/commit/82a973c04367123ae98bd9abdf80d9eda9b910e2). (Because original SD-WebUI is almost static now, Forge will sync with original WebUI every 90 days, or when important fixes.)
 
