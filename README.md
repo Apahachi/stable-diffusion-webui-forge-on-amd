@@ -30,7 +30,7 @@ Note: If you have an integrated GPU (iGPU), you may need to disable it, or use t
 For example , Place `rocblas.dll `into `C:\Program Files\AMD\ROCm\5.7\bin`( this fold will appear after install HIP SKD  in next step,chat the path if you are using different ROCM version ，eg 6.1.2，`C:\Program Files\AMD\ROCm\6.1\bin`) replace the origianl one ,replace library within` rocblas\library` , the orignally library can be rename to something else , like , "origlibrary" in case for other uses.
 
 ## Install HIP SDK
-Download [ HIP SDK 5.7/6.1.2](https://www.amd.com/en/developer/resources/rocm-hub/hip-sdk.html)
+Download [ HIP SDK](https://www.amd.com/en/developer/resources/rocm-hub/hip-sdk.html)
 
 
 ## Add folders to PATH
@@ -41,7 +41,8 @@ Download from[ here](https://github.com/lshqqytiger/ZLUDA/releases/)
 Add the ZLUDA folder* and %HIP_PATH%bin to your [PATH.](https://github.com/brknsoul/ROCmLibs/wiki/Adding-folders-to-PATH)
 (note, you don't need to rename zluda files `cublas.dll` to `cublas64_11.dll` ,cusparse to `cusparse64_11.dll` and replace the one in vevn folder like other tutorial because the zluda had already detecd in patch in script)
 
-## Knowing bugs in HIPSDK 6.2 . The model can not load in fully dedicted vram when have enought vram instead it will load into shared vram result to useless image generated. by that happens , copy `amdhip64_6.dll` from hip 6.1/bin to 6.2/bin might fix this .
+## Knowing bugs in HIPSDK 6.2 . 
+The model can not load in fully dedicted vram when have enought vram instead it will load into shared vram result to useless image generated. by that happens , copy `amdhip64_6.dll` from `hip 6.1/bin` to `6.2/bin` might fix this .
 
 ## 2, Install ;
 
@@ -100,7 +101,7 @@ python -m venv venv
 pip install torch==2.2.1 torchvision --index-url https://download.pytorch.org/whl/cu118
 
 ```
-if want do update default pytorch to torch 2.4 or 2.5 ...
+if want do update default pytorch to torch 2.4 ( same speed as torch 2.3.1 or  a little bit low in torch 2.5 ...)
 
 by build from ROCm official's hipblaslt windows branch or download hipblaslt from [hipblaslt-rocmlibs](https://github.com/likelovewant/ROCmLibs-for-gfx1103-AMD780M-APU/releases/download/v0.6.2.4/hipblaslt-rocmlibs-for-gfx1100-gfx1101-gfx1102-gfx1103-gfx1150-for.hip6.2.7z), currently only support gfx110x series on windows .
  Place `hipblaslt.dll `into `C:\Program Files\AMD\ROCm\6.2\bin`( `C:\Program Files\AMD\ROCm\6.2\bin`),creat a `hipblaslt` directory replace library within` hipblaslt\library` , download the [ZLUDA-nightly-windows-rocm6-amd64.zip](https://github.com/lshqqytiger/ZLUDA/releases/download/rel.c4994b3093e02231339d22e12be08418b2af781f/ZLUDA-nightly-windows-rocm6-amd64.zip) mannuly ,unzip and place in the .zluda directory in default AMD FORGE directory .doing nothing .
