@@ -41,6 +41,8 @@ Download from[ here](https://github.com/lshqqytiger/ZLUDA/releases/)
 Add the ZLUDA folder* and %HIP_PATH%bin to your [PATH.](https://github.com/brknsoul/ROCmLibs/wiki/Adding-folders-to-PATH)
 (note, you don't need to rename zluda files `cublas.dll` to `cublas64_11.dll` ,cusparse to `cusparse64_11.dll` and replace the one in vevn folder like other tutorial because the zluda had already detecd in patch in script)
 
+## Knowing bugs in HIPSDK 6.2 . The model can not load in fully dedicted vram when have enought vram instead it will load into shared vram result to useless image generated. by that happens , copy `amdhip64_6.dll` from hip 6.1/bin to 6.2/bin might fix this .
+
 ## 2, Install ;
 
 	git clone https://github.com/likelovewant/stable-diffusion-webui-forge-on-amd.git
